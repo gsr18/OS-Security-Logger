@@ -6,45 +6,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Download, RefreshCw } from "lucide-react";
-import { useState } from "react";
-
-// Mock data - in production, this would come from the backend API
-const generateMockEvents = () => {
-  const eventTypes = ["FAILED_LOGIN", "SUCCESS_LOGIN", "SUDO_COMMAND", "PRIV_ESCALATION"];
-  const usernames = ["admin", "root", "john", "alice", "bob"];
-  const ips = ["192.168.1.100", "192.168.1.50", "203.0.113.45", "198.51.100.20", "10.0.0.5"];
-  const osNames = ["Linux", "Windows", "Darwin"];
-  const processes = ["sshd", "sudo", "loginwindow", "winlogon"];
-  
-  return Array.from({ length: 50 }, (_, i) => ({
-    id: i + 1,
-    timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
-    eventType: eventTypes[Math.floor(Math.random() * eventTypes.length)],
-    username: usernames[Math.floor(Math.random() * usernames.length)],
-    sourceIp: Math.random() > 0.3 ? ips[Math.floor(Math.random() * ips.length)] : null,
-    processName: processes[Math.floor(Math.random() * processes.length)],
-    osName: osNames[Math.floor(Math.random() * osNames.length)],
-    rawMessage: `Sample log message for event ${i + 1}`
-  }));
-};
+import { useState, useEffect } from "react";
+import { api, SecurityEvent } from "@/lib/api";
 
 export default function EventsPage() {
-  const [allEvents] = useState(generateMockEvents());
+  const [allEvents, setAllEvents] = useState<SecurityEvent[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("all");
   const [osFilter, setOsFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const eventsPerPage = 10;
+
+  const fetchEvents = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await api.getEvents({ limit: 500 });
+      setAllEvents(response.events);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+      console.error('Error fetching events:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+    
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchEvents, 10000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter events based on search and filters
   const filteredEvents = allEvents.filter(event => {
     const matchesSearch = searchQuery === "" || 
       event.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.sourceIp?.includes(searchQuery) ||
-      event.rawMessage.toLowerCase().includes(searchQuery.toLowerCase());
+      event.source_ip?.includes(searchQuery) ||
+      event.raw_message.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesEventType = eventTypeFilter === "all" || event.eventType === eventTypeFilter;
-    const matchesOs = osFilter === "all" || event.osName === osFilter;
+    const matchesEventType = eventTypeFilter === "all" || event.event_type === eventTypeFilter;
+    const matchesOs = osFilter === "all" || event.os_name === osFilter;
     
     return matchesSearch && matchesEventType && matchesOs;
   });
@@ -66,6 +73,29 @@ export default function EventsPage() {
     setCurrentPage(1);
   };
 
+  const handleExport = () => {
+    const csv = [
+      ['ID', 'Timestamp', 'OS', 'Event Type', 'Username', 'Source IP', 'Process', 'Message'].join(','),
+      ...sortedEvents.map(e => [
+        e.id,
+        e.timestamp,
+        e.os_name,
+        e.event_type,
+        e.username || '',
+        e.source_ip || '',
+        e.process_name || '',
+        `"${e.raw_message.replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security_events_${new Date().toISOString()}.csv`;
+    a.click();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -75,6 +105,14 @@ export default function EventsPage() {
           <h1 className="text-3xl font-bold mb-2">Security Events</h1>
           <p className="text-muted-foreground">Browse and filter all captured security events</p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 rounded-lg border border-destructive bg-destructive/10 text-destructive">
+            <p className="font-medium">Error loading events</p>
+            <p className="text-sm">{error}</p>
+            <p className="text-sm mt-2">Make sure the Python backend is running on http://localhost:5000</p>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="mb-6 p-4 rounded-lg border border-border bg-card">
@@ -125,9 +163,13 @@ export default function EventsPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Reset Filters
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={sortedEvents.length === 0}>
               <Download className="h-4 w-4 mr-2" />
               Export CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchEvents} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
             <div className="ml-auto text-sm text-muted-foreground">
               Showing {startIndex + 1}-{Math.min(startIndex + eventsPerPage, sortedEvents.length)} of {sortedEvents.length} events
@@ -136,7 +178,12 @@ export default function EventsPage() {
         </div>
 
         {/* Events List */}
-        {paginatedEvents.length === 0 ? (
+        {isLoading && allEvents.length === 0 ? (
+          <div className="text-center py-12">
+            <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground animate-spin mb-4" />
+            <p className="text-muted-foreground">Loading events...</p>
+          </div>
+        ) : paginatedEvents.length === 0 ? (
           <div className="text-center py-12">
             <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No events found</h3>
@@ -145,7 +192,17 @@ export default function EventsPage() {
         ) : (
           <div className="space-y-4 mb-8">
             {paginatedEvents.map((event) => (
-              <EventCard key={event.id} {...event} />
+              <EventCard 
+                key={event.id}
+                id={event.id}
+                timestamp={event.timestamp}
+                eventType={event.event_type}
+                username={event.username}
+                sourceIp={event.source_ip}
+                processName={event.process_name}
+                osName={event.os_name}
+                rawMessage={event.raw_message}
+              />
             ))}
           </div>
         )}
