@@ -1,69 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeMockData, storedAlerts } from "@/lib/mock-data";
+import { supabase, DbAlert } from "@/lib/supabase";
 
 export async function GET(request: NextRequest) {
-  initializeMockData();
-  
   const searchParams = request.nextUrl.searchParams;
   
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "50");
   const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : pageSize;
-  
-  const alertType = searchParams.get("type") || searchParams.get("alertType") || undefined;
+  const type = searchParams.get("type") || searchParams.get("alertType") || undefined;
   const severity = searchParams.get("severity") || undefined;
   const status = searchParams.get("status") || undefined;
-  const sinceMinutes = searchParams.get("since_minutes") 
-    ? parseInt(searchParams.get("since_minutes")!) 
-    : undefined;
 
-  let filtered = [...storedAlerts];
-  
-  if (alertType) {
-    filtered = filtered.filter(a => a.alert_type === alertType);
-  }
-  if (severity) {
-    filtered = filtered.filter(a => a.severity?.toUpperCase() === severity.toUpperCase());
-  }
-  if (status) {
-    filtered = filtered.filter(a => a.status === status);
-  }
-  if (sinceMinutes) {
-    const cutoff = Date.now() - sinceMinutes * 60 * 1000;
-    filtered = filtered.filter(a => new Date(a.timestamp).getTime() >= cutoff);
-  }
+  let query = supabase
+    .from('alerts')
+    .select('*', { count: 'exact' })
+    .order('timestamp', { ascending: false });
 
-  const total = filtered.length;
+  if (type) query = query.eq('alert_type', type);
+  if (severity) query = query.eq('severity', severity);
+  if (status) query = query.eq('status', status);
+
   const offset = (page - 1) * pageSize;
-  const paginatedAlerts = filtered.slice(offset, offset + limit);
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, count, error } = await query;
+
+  if (error) {
+    console.error('Supabase error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const alerts = (data || []).map((a: DbAlert) => ({
+    id: a.id,
+    created_at: a.created_at,
+    timestamp: a.timestamp,
+    alert_type: a.alert_type,
+    severity: a.severity,
+    description: a.description,
+    related_event_ids: a.related_event_ids,
+    status: a.status,
+  }));
+
+  const total = count || 0;
   const totalPages = Math.ceil(total / pageSize);
 
   return NextResponse.json({
-    alerts: paginatedAlerts,
+    alerts,
     total,
-    count: paginatedAlerts.length,
+    count: alerts.length,
     page,
     pageSize,
     totalPages
   });
-}
-
-export async function PATCH(request: NextRequest) {
-  const url = new URL(request.url);
-  const alertId = url.pathname.split('/').pop();
-  
-  if (!alertId) {
-    return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
-  }
-
-  const body = await request.json();
-  const { status } = body;
-  
-  const alert = storedAlerts.find(a => a.id === parseInt(alertId));
-  if (alert) {
-    alert.status = status;
-    return NextResponse.json({ success: true, id: alert.id, status });
-  }
-  
-  return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
 }
