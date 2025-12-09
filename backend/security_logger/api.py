@@ -2,10 +2,17 @@
 
 import logging
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from datetime import datetime
 from .storage.db import Database
+from .auth import (
+    auth_required, verify_password, create_access_token, decode_token,
+    get_user_by_email, get_user_by_id, create_user, ensure_admin_exists,
+    hash_password
+)
+from .database import SessionLocal
+from .models import UserModel
 
 logger = logging.getLogger("security_logger.api")
 
@@ -37,7 +44,85 @@ def create_app(database: Database, config: dict = None):
             'timestamp': datetime.now().isoformat()
         })
     
+    @app.route('/api/auth/login', methods=['POST'])
+    def login():
+        """Authenticate user and return JWT token."""
+        try:
+            data = request.get_json()
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            
+            if not email or not password:
+                return jsonify({'error': 'Email and password are required'}), 400
+            
+            db = SessionLocal()
+            try:
+                user = get_user_by_email(db, email)
+                if not user or not verify_password(password, user.password_hash):
+                    return jsonify({'error': 'Invalid email or password'}), 401
+                
+                token = create_access_token(user)
+                return jsonify({
+                    'accessToken': token,
+                    'user': user.to_dict()
+                })
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Login error: {e}")
+            return jsonify({'error': 'Login failed'}), 500
+    
+    @app.route('/api/auth/me', methods=['GET'])
+    @auth_required()
+    def get_me():
+        """Get current authenticated user."""
+        try:
+            user_id = int(g.user.get('sub'))
+            db = SessionLocal()
+            try:
+                user = get_user_by_id(db, user_id)
+                if not user:
+                    return jsonify({'error': 'User not found'}), 404
+                return jsonify(user.to_dict())
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Get user error: {e}")
+            return jsonify({'error': 'Failed to get user'}), 500
+    
+    @app.route('/api/auth/register', methods=['POST'])
+    @auth_required(allowed_roles=['admin'])
+    def register():
+        """Register a new user (admin only)."""
+        try:
+            data = request.get_json()
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            full_name = data.get('fullName', '').strip()
+            role = data.get('role', 'viewer')
+            
+            if not email or not password:
+                return jsonify({'error': 'Email and password are required'}), 400
+            
+            if role not in ('admin', 'viewer'):
+                return jsonify({'error': 'Invalid role'}), 400
+            
+            db = SessionLocal()
+            try:
+                existing = get_user_by_email(db, email)
+                if existing:
+                    return jsonify({'error': 'Email already registered'}), 409
+                
+                user = create_user(db, email, password, full_name, role)
+                return jsonify({'success': True, 'user': user.to_dict()}), 201
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Register error: {e}")
+            return jsonify({'error': 'Registration failed'}), 500
+    
     @app.route('/api/events', methods=['GET'])
+    @auth_required()
     def get_events():
         """Get security events with filters and pagination."""
         try:
@@ -91,8 +176,9 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/events', methods=['POST'])
+    @auth_required(allowed_roles=['admin'])
     def create_event():
-        """Create a new event (for testing/mock purposes)."""
+        """Create a new event (admin only)."""
         try:
             from .events import SecurityEvent
             from .mock_generator import generate_mock_event
@@ -110,6 +196,7 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/alerts', methods=['GET'])
+    @auth_required()
     def get_alerts():
         """Get alerts with filters and pagination."""
         try:
@@ -155,8 +242,9 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/alerts/<int:alert_id>', methods=['PATCH'])
+    @auth_required(allowed_roles=['admin'])
     def update_alert(alert_id: int):
-        """Update alert status."""
+        """Update alert status (admin only)."""
         try:
             data = request.get_json()
             status = data.get('status')
@@ -176,6 +264,7 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/stats', methods=['GET'])
+    @auth_required()
     def get_stats():
         """Get comprehensive statistics."""
         try:
@@ -187,6 +276,7 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/log-sources', methods=['GET'])
+    @auth_required()
     def get_log_sources():
         """Get available log sources being monitored."""
         try:
@@ -203,6 +293,7 @@ def create_app(database: Database, config: dict = None):
             return jsonify({'sources': []})
     
     @app.route('/api/rules', methods=['GET'])
+    @auth_required()
     def get_rules():
         """Get detection rules status."""
         try:
