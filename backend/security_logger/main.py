@@ -1,145 +1,171 @@
-"""Main application orchestration."""
+"""Main application orchestration with all components."""
 
 import platform
 import signal
 import sys
 import logging
-from typing import Optional
+import os
+from typing import Optional, List
 from .config import load_config
 from .logging_utils import setup_logging
 from .storage.db import Database
 from .analysis.engine import RuleEngine
 from .events import SecurityEvent
-from .sources.base import EventSource
+from .log_reader import MultiLogReader, get_available_log_files
+from .parsing.linux_parser import LinuxParser
 
 logger = logging.getLogger("security_logger.main")
 
 
 class SecurityLogger:
-    """Main application orchestrator."""
+    """Main application orchestrator with real-time log monitoring."""
     
     def __init__(self, config_path: str = "config.yaml"):
-        # Load configuration
         self.config = load_config(config_path)
         
-        # Setup logging
         log_level = self.config.get('logging.level', 'INFO')
         setup_logging(log_level)
         
-        # Initialize database
         db_path = self.config.get('database.path', './security_events.db')
         self.database = Database(db_path)
         
-        # Initialize rule engine
         self.rule_engine = RuleEngine(self.database, self.config.data)
         
-        # Event sources
-        self.event_sources = []
+        self.log_reader = MultiLogReader(self._handle_log_line)
         
-        # Detect OS and initialize appropriate source
-        self._init_event_sources()
+        self.use_mock_data = self.config.get('use_mock_data', False)
+        
+        self._init_log_sources()
     
-    def _init_event_sources(self):
-        """Initialize OS-specific event sources."""
-        
+    def _init_log_sources(self):
+        """Initialize log sources based on configuration."""
         os_name = platform.system()
         logger.info(f"Detected OS: {os_name}")
         
+        if self.use_mock_data:
+            logger.info("Mock data mode enabled - not monitoring real log files")
+            return
+        
         if os_name == "Linux":
-            from .sources.linux_source import LinuxEventSource
-            
-            if self.config.get('sources.linux.enabled', True):
-                log_path = self.config.get('sources.linux.auth_log_path', '/var/log/auth.log')
-                source = LinuxEventSource(self._handle_event, log_path)
-                self.event_sources.append(source)
-                logger.info("Linux event source initialized")
-        
+            self._init_linux_sources()
         elif os_name == "Windows":
-            from .sources.windows_source import WindowsEventSource
-            
-            if self.config.get('sources.windows.enabled', True):
-                source = WindowsEventSource(self._handle_event)
-                self.event_sources.append(source)
-                logger.info("Windows event source initialized")
-        
+            logger.info("Windows log monitoring not yet implemented")
         elif os_name == "Darwin":
-            from .sources.macos_source import MacOSEventSource
-            
-            if self.config.get('sources.macos.enabled', True):
-                source = MacOSEventSource(self._handle_event)
-                self.event_sources.append(source)
-                logger.info("macOS event source initialized")
-        
+            logger.info("macOS log monitoring not yet implemented")
         else:
             logger.warning(f"Unsupported OS: {os_name}")
     
-    def _handle_event(self, event: SecurityEvent):
-        """Handle incoming events from sources."""
+    def _init_linux_sources(self):
+        """Initialize Linux log sources."""
+        linux_config = self.config.get('log_sources.linux', {})
         
+        if not linux_config.get('enabled', True):
+            logger.info("Linux log sources disabled in config")
+            return
+        
+        configured_files = linux_config.get('files', [])
+        
+        if configured_files:
+            for file_config in configured_files:
+                path = file_config.get('path')
+                log_type = file_config.get('type', 'auth')
+                
+                if path and os.path.exists(path):
+                    if self.log_reader.add_log_file(path, log_type):
+                        logger.info(f"Added configured log source: {path} ({log_type})")
+                    else:
+                        logger.warning(f"Could not add log source: {path}")
+                elif path:
+                    logger.warning(f"Configured log file not found: {path}")
+        
+        available = get_available_log_files()
+        configured_paths = {f.get('path') for f in configured_files if f.get('path')}
+        
+        for path, log_type in available.items():
+            if path not in configured_paths:
+                if self.log_reader.add_log_file(path, log_type):
+                    logger.info(f"Auto-discovered log source: {path} ({log_type})")
+        
+        status = self.log_reader.get_status()
+        if not status:
+            logger.warning("No log files could be monitored. Check file permissions.")
+            logger.warning("Try running with sudo or adjust log file permissions.")
+    
+    def _handle_log_line(self, line: str, log_source: str):
+        """Handle a new log line from any source."""
         try:
-            # Store in database
-            event_id = self.database.insert_event(event)
-            event.id = event_id
+            event = LinuxParser.parse_line(line, log_source)
             
-            logger.info(f"Event stored: {event.event_type} - {event.username} (ID: {event_id})")
-        
+            if event:
+                event_id = self.database.insert_event(event)
+                event.id = event_id
+                logger.debug(f"Event stored: {event.event_type} - {event.user} (ID: {event_id})")
+            
         except Exception as e:
-            logger.error(f"Error handling event: {e}")
+            logger.error(f"Error handling log line: {e}")
     
     def start(self):
         """Start all components."""
-        
         logger.info("=" * 60)
         logger.info("Starting Real-Time OS Security Event Logger")
         logger.info("=" * 60)
         
-        # Start event sources
-        for source in self.event_sources:
-            source.start()
+        if self.use_mock_data:
+            logger.info("Running in MOCK DATA mode")
+            self._seed_mock_data()
+        else:
+            self.log_reader.start()
+            logger.info(f"Log reader started, monitoring {len(self.log_reader.tailers)} files")
         
-        # Start rule engine
-        self.rule_engine.start(interval_seconds=60)
+        interval = self.config.get('analysis.interval_seconds', 60)
+        self.rule_engine.start(interval_seconds=interval)
         
         logger.info("All components started successfully")
         logger.info("Press Ctrl+C to stop")
     
+    def _seed_mock_data(self):
+        """Seed database with mock data for demo mode."""
+        from .mock_generator import seed_database_with_mock_data
+        
+        stats = self.database.get_stats()
+        if stats.get('total_events', 0) < 50:
+            events, alerts = seed_database_with_mock_data(self.database, 100, 15)
+            logger.info(f"Seeded database with {events} mock events and {alerts} mock alerts")
+    
     def stop(self):
         """Stop all components."""
-        
         logger.info("Shutting down...")
         
-        # Stop event sources
-        for source in self.event_sources:
-            source.stop()
-        
-        # Stop rule engine
+        self.log_reader.stop()
         self.rule_engine.stop()
-        
-        # Close database
         self.database.close()
         
         logger.info("Shutdown complete")
     
     def run_forever(self):
         """Run until interrupted."""
-        
-        # Setup signal handlers
         def signal_handler(sig, frame):
-            print()  # New line after ^C
+            print()
             self.stop()
             sys.exit(0)
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
-        # Start and wait
         self.start()
         
-        # Keep main thread alive
         try:
             signal.pause()
         except AttributeError:
-            # Windows doesn't have signal.pause()
             import time
             while True:
                 time.sleep(1)
+    
+    def get_status(self) -> dict:
+        """Get current system status."""
+        return {
+            'log_sources': self.log_reader.get_status(),
+            'rules': self.rule_engine.get_rule_status(),
+            'stats': self.database.get_stats(),
+            'mode': 'mock' if self.use_mock_data else 'real'
+        }

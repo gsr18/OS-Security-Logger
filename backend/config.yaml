@@ -2,16 +2,34 @@ database:
   path: "./security_events.db"
 
 logging:
-  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
 
-sources:
+use_mock_data: false
+
+log_sources:
   linux:
     enabled: true
-    auth_log_path: "/var/log/auth.log"
+    files:
+      - path: "/var/log/auth.log"
+        type: "auth"
+      - path: "/var/log/secure"
+        type: "auth"
+      - path: "/var/log/syslog"
+        type: "syslog"
+      - path: "/var/log/messages"
+        type: "syslog"
+      - path: "/var/log/kern.log"
+        type: "kernel"
+      - path: "/var/log/ufw.log"
+        type: "firewall"
+      - path: "/var/log/audit/audit.log"
+        type: "audit"
+  
   windows:
-    enabled: true
+    enabled: false
+  
   macos:
-    enabled: true
+    enabled: false
 
 rules:
   brute_force:
@@ -21,14 +39,51 @@ rules:
   
   sudo_suspicious:
     enabled: true
-    unusual_users: ["www-data", "nobody", "guest"]
+    unusual_users:
+      - "www-data"
+      - "nobody"
+      - "guest"
+      - "daemon"
+      - "apache"
+      - "nginx"
+  
+  firewall_attack:
+    enabled: true
+    max_blocks: 20
+    window_minutes: 5
+  
+  port_scan:
+    enabled: true
+    min_ports: 10
+    window_minutes: 5
+  
+  system_instability:
+    enabled: true
+    max_errors: 10
+    window_minutes: 10
+  
+  service_failure:
+    enabled: true
+    max_failures: 3
+    window_minutes: 15
+  
+  privilege_escalation:
+    enabled: true
+  
+  anomalous_login:
+    enabled: false
+    start_hour: 0
+    end_hour: 5
   
   rapid_login:
     enabled: true
-    max_attempts: 10
-    window_minutes: 5
+    max_logins: 5
+    window_minutes: 2
 
 api:
   host: "0.0.0.0"
   port: 5000
   debug: false
+
+analysis:
+  interval_seconds: 60

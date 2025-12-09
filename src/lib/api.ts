@@ -1,27 +1,40 @@
 /**
- * API client for security logger backend
+ * API client for security logger backend (Flask or Next.js fallback)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const FLASK_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
 export interface SecurityEvent {
   id: number;
+  created_at?: string;
+  event_time?: string;
   timestamp: string;
-  os_name: string;
+  host?: string;
+  process?: string;
+  process_name?: string;
+  pid?: number;
   event_type: string;
-  username: string | null;
-  source_ip: string | null;
-  process_name: string | null;
+  user?: string | null;
+  username?: string | null;
+  src_ip?: string | null;
+  source_ip?: string | null;
+  dst_ip?: string | null;
+  severity?: string;
+  log_source?: string;
   raw_message: string;
+  os_name: string;
 }
 
 export interface Alert {
   id: number;
+  created_at?: string;
   timestamp: string;
   alert_type: string;
   severity: string;
   description: string;
   related_event_ids: string | null;
+  status?: string;
 }
 
 export interface Stats {
@@ -29,49 +42,139 @@ export interface Stats {
   total_alerts: number;
   events_by_type: Record<string, number>;
   events_by_os: Record<string, number>;
+  events_by_severity?: Record<string, number>;
   alerts_by_severity: Record<string, number>;
+  alerts_by_status?: Record<string, number>;
   top_source_ips: Array<{ ip: string; count: number }>;
+  top_users?: Array<{ user: string; count: number }>;
+  hourly_events?: Array<{ hour: string; count: number }>;
+  failed_logins?: number;
+  successful_logins?: number;
+  unique_ips?: number;
 }
 
 interface EventsResponse {
   events: SecurityEvent[];
+  total: number;
   count: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
 }
 
 interface AlertsResponse {
   alerts: Alert[];
+  total: number;
   count: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
 }
 
-export class SecurityLoggerAPI {
-  private baseUrl: string;
+interface HealthResponse {
+  status: string;
+  backend?: string;
+  db?: string;
+  mode?: string;
+  timestamp: string;
+}
 
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+let backendAvailable: boolean | null = null;
+let lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL = 30000;
+
+export class SecurityLoggerAPI {
+  private flaskUrl: string;
+  private useMock: boolean;
+
+  constructor(flaskUrl: string = FLASK_BACKEND_URL, useMock: boolean = USE_MOCK_DATA) {
+    this.flaskUrl = flaskUrl;
+    this.useMock = useMock;
   }
 
-  async health(): Promise<{ status: string; timestamp: string; mode?: string }> {
-    const response = await fetch(`${this.baseUrl}/api/health`);
+  private async checkBackendHealth(): Promise<boolean> {
+    const now = Date.now();
+    if (backendAvailable !== null && now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
+      return backendAvailable;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
+      const response = await fetch(`${this.flaskUrl}/api/health`, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      backendAvailable = response.ok;
+      lastHealthCheck = now;
+      return backendAvailable;
+    } catch {
+      backendAvailable = false;
+      lastHealthCheck = now;
+      return false;
+    }
+  }
+
+  private getApiBase(): string {
+    if (this.useMock || backendAvailable === false) {
+      return '';
+    }
+    return this.flaskUrl;
+  }
+
+  async health(): Promise<HealthResponse> {
+    const useFlask = await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
+    const response = await fetch(`${baseUrl}/api/health`);
     if (!response.ok) {
       throw new Error('API health check failed');
     }
-    return response.json();
+    const data = await response.json();
+    return {
+      ...data,
+      backend: useFlask ? 'flask' : 'nextjs',
+      mode: useFlask ? (data.mode || 'real') : 'mock',
+    };
   }
 
   async getEvents(params?: {
+    page?: number;
+    pageSize?: number;
     limit?: number;
     type?: string;
+    eventType?: string;
     os?: string;
+    user?: string;
+    srcIp?: string;
+    severity?: string;
+    search?: string;
     since_minutes?: number;
+    from?: string;
+    to?: string;
   }): Promise<EventsResponse> {
+    const useFlask = !this.useMock && await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
     const queryParams = new URLSearchParams();
     
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
     if (params?.limit) queryParams.set('limit', params.limit.toString());
     if (params?.type) queryParams.set('type', params.type);
+    if (params?.eventType) queryParams.set('eventType', params.eventType);
     if (params?.os) queryParams.set('os', params.os);
+    if (params?.user) queryParams.set('user', params.user);
+    if (params?.srcIp) queryParams.set('srcIp', params.srcIp);
+    if (params?.severity) queryParams.set('severity', params.severity);
+    if (params?.search) queryParams.set('search', params.search);
     if (params?.since_minutes) queryParams.set('since_minutes', params.since_minutes.toString());
+    if (params?.from) queryParams.set('from', params.from);
+    if (params?.to) queryParams.set('to', params.to);
 
-    const url = `${this.baseUrl}/api/events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const url = `${baseUrl}/api/events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -82,17 +185,34 @@ export class SecurityLoggerAPI {
   }
 
   async getAlerts(params?: {
+    page?: number;
+    pageSize?: number;
     limit?: number;
+    type?: string;
+    alertType?: string;
     severity?: string;
+    status?: string;
     since_minutes?: number;
+    from?: string;
+    to?: string;
   }): Promise<AlertsResponse> {
+    const useFlask = !this.useMock && await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
     const queryParams = new URLSearchParams();
     
+    if (params?.page) queryParams.set('page', params.page.toString());
+    if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
     if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.type) queryParams.set('type', params.type);
+    if (params?.alertType) queryParams.set('alertType', params.alertType);
     if (params?.severity) queryParams.set('severity', params.severity);
+    if (params?.status) queryParams.set('status', params.status);
     if (params?.since_minutes) queryParams.set('since_minutes', params.since_minutes.toString());
+    if (params?.from) queryParams.set('from', params.from);
+    if (params?.to) queryParams.set('to', params.to);
 
-    const url = `${this.baseUrl}/api/alerts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const url = `${baseUrl}/api/alerts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -102,8 +222,28 @@ export class SecurityLoggerAPI {
     return response.json();
   }
 
+  async updateAlertStatus(alertId: number, status: string): Promise<{ success: boolean }> {
+    const useFlask = !this.useMock && await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
+    const response = await fetch(`${baseUrl}/api/alerts/${alertId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update alert: ${response.statusText}`);
+    }
+    
+    return response.json();
+  }
+
   async getStats(): Promise<Stats> {
-    const response = await fetch(`${this.baseUrl}/api/stats`);
+    const useFlask = !this.useMock && await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
+    const response = await fetch(`${baseUrl}/api/stats`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch stats: ${response.statusText}`);
@@ -113,7 +253,10 @@ export class SecurityLoggerAPI {
   }
 
   async generateEvent(): Promise<SecurityEvent> {
-    const response = await fetch(`${this.baseUrl}/api/events`, {
+    const useFlask = !this.useMock && await this.checkBackendHealth();
+    const baseUrl = useFlask ? this.flaskUrl : '';
+    
+    const response = await fetch(`${baseUrl}/api/events`, {
       method: 'POST',
     });
     
@@ -123,6 +266,15 @@ export class SecurityLoggerAPI {
     
     const data = await response.json();
     return data.event;
+  }
+
+  isUsingFlaskBackend(): boolean {
+    return backendAvailable === true && !this.useMock;
+  }
+
+  resetHealthCheck(): void {
+    backendAvailable = null;
+    lastHealthCheck = 0;
   }
 }
 
