@@ -1,7 +1,8 @@
 """Brute force detection rule."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Dict
+from collections import defaultdict
 from .rules_base import Rule
 from ..events import SecurityEvent, Alert
 
@@ -20,50 +21,47 @@ class BruteForceRule(Rule):
     
     def evaluate(self, events: List[SecurityEvent]) -> List[Alert]:
         """Check for multiple failed login attempts."""
-        
         if not self.enabled:
             return []
         
         alerts = []
         
-        # Filter failed login events
-        failed_logins = [e for e in events if e.event_type == "FAILED_LOGIN"]
+        failed_logins = [
+            e for e in events 
+            if e.event_type in ('AUTH_FAILURE', 'FAILED_LOGIN')
+        ]
         
         if not failed_logins:
             return []
         
-        # Group by username
-        by_username: Dict[str, List[SecurityEvent]] = {}
+        by_username: Dict[str, List[SecurityEvent]] = defaultdict(list)
         for event in failed_logins:
-            if event.username:
-                by_username.setdefault(event.username, []).append(event)
+            if event.user:
+                by_username[event.user].append(event)
         
-        # Group by source IP
-        by_ip: Dict[str, List[SecurityEvent]] = {}
+        by_ip: Dict[str, List[SecurityEvent]] = defaultdict(list)
         for event in failed_logins:
-            if event.source_ip:
-                by_ip.setdefault(event.source_ip, []).append(event)
+            if event.src_ip:
+                by_ip[event.src_ip].append(event)
         
-        # Check username-based attempts
         for username, user_events in by_username.items():
             if len(user_events) >= self.max_attempts:
                 event_ids = ",".join(str(e.id) for e in user_events if e.id)
                 alerts.append(Alert(
-                    timestamp=datetime.now(),
-                    alert_type="BRUTE_FORCE_SUSPECTED",
-                    severity="CRITICAL",
+                    created_at=datetime.now(),
+                    alert_type="BRUTE_FORCE",
+                    severity="critical",
                     description=f"Brute force suspected: {len(user_events)} failed login attempts for user '{username}' in {self.window_minutes} minutes",
                     related_event_ids=event_ids
                 ))
         
-        # Check IP-based attempts
         for source_ip, ip_events in by_ip.items():
             if len(ip_events) >= self.max_attempts:
                 event_ids = ",".join(str(e.id) for e in ip_events if e.id)
                 alerts.append(Alert(
-                    timestamp=datetime.now(),
-                    alert_type="BRUTE_FORCE_SUSPECTED",
-                    severity="CRITICAL",
+                    created_at=datetime.now(),
+                    alert_type="BRUTE_FORCE",
+                    severity="critical",
                     description=f"Brute force suspected: {len(ip_events)} failed login attempts from IP '{source_ip}' in {self.window_minutes} minutes",
                     related_event_ids=event_ids
                 ))
