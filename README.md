@@ -1,6 +1,6 @@
 # Real-Time OS Security Event Logger
 
-A cross-platform security event logger that monitors OS-level security events in real-time, stores them in SQLite, and provides intelligent rule-based threat detection.
+A cross-platform security event logger that monitors OS-level security events in real-time, stores them in SQLite using SQLAlchemy ORM, and provides intelligent rule-based threat detection.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ A cross-platform security event logger that monitors OS-level security events in
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      Python Backend (Flask)                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │  Log Reader  │─▶│   Parsers    │─▶│  SQLite Database         │  │
+│  │  Log Reader  │─▶│   Parsers    │─▶│  SQLite + SQLAlchemy ORM │  │
 │  │  (tail -f)   │  │  (per type)  │  │  (events + alerts)       │  │
 │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │
 │                                               │                     │
@@ -201,12 +201,72 @@ Or adjust file permissions:
 sudo chmod 644 /var/log/auth.log
 ```
 
+## SQLite Database
+
+The application uses SQLite as the storage backend with SQLAlchemy ORM for data persistence.
+
+### Database File
+
+- **Location**: `security_events.db` (relative to backend root)
+- **Tables**: `security_events` and `alerts`
+- **Auto-created**: Tables are automatically created on first run via `Base.metadata.create_all()`
+
+### Resetting the Database
+
+To reset the database and start fresh:
+
+```bash
+cd backend
+rm -f security_events.db
+# Tables will be recreated on next run
+python run.py --mock
+```
+
+### Database Schema
+
+**security_events table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| created_at | DATETIME | When the event was ingested |
+| event_time | DATETIME | When the event actually occurred |
+| host | VARCHAR(128) | Host machine name |
+| process | VARCHAR(128) | Process that generated the event |
+| pid | INTEGER | Process ID |
+| event_type | VARCHAR(64) | Event type (AUTH_FAILURE, etc.) |
+| user | VARCHAR(128) | Username involved |
+| src_ip | VARCHAR(64) | Source IP address |
+| dst_ip | VARCHAR(64) | Destination IP address |
+| severity | VARCHAR(32) | info/warning/error/critical |
+| log_source | VARCHAR(64) | Log file source (auth, syslog, etc.) |
+| raw_message | TEXT | Original log message |
+| platform | VARCHAR(32) | OS platform (linux/windows/macos) |
+
+**alerts table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| created_at | DATETIME | When the alert was generated |
+| alert_type | VARCHAR(64) | Alert type (BRUTE_FORCE, etc.) |
+| description | TEXT | Alert description |
+| severity | VARCHAR(32) | low/medium/high/critical |
+| related_event_ids | TEXT | Comma-separated related event IDs |
+| status | VARCHAR(32) | active/acknowledged/resolved/dismissed |
+
+### Configuration
+
+Set `DATABASE_URL` environment variable to customize the database location:
+
+```bash
+export DATABASE_URL="sqlite:///./custom_path.db"
+```
+
 ## Tech Stack
 
 **Backend:**
 - Python 3.8+
 - Flask 3.0 with CORS
-- SQLite with thread-safe connections
+- SQLite with SQLAlchemy ORM
 - YAML configuration
 
 **Frontend:**
@@ -249,3 +309,4 @@ sudo chmod 644 /var/log/auth.log
 ## License
 
 MIT
+
