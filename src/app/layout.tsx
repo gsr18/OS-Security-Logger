@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth";
+import { ClientLoggerProvider } from "@/components/client-logger-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,9 @@ export default function RootLayout({
           data-orchids-project-id="9b67223e-a4d7-4c46-85d1-001eecefff8b"
         />
         <AuthProvider>
-          {children}
+          <ClientLoggerProvider>
+            {children}
+          </ClientLoggerProvider>
         </AuthProvider>
       </body>
     </html>
