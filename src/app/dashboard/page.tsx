@@ -3,7 +3,7 @@
 import { Header } from "@/components/header";
 import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
-import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw } from "lucide-react";
+import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, SecurityEvent, Alert, Stats } from "@/lib/api";
 
@@ -38,12 +38,18 @@ export default function DashboardPage() {
     }
   };
 
+  const simulateEvent = async () => {
+    try {
+      await api.generateEvent();
+      await fetchData();
+    } catch (err) {
+      console.error('Error generating event:', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
-    
-    // Auto-refresh every 5 seconds
     const interval = setInterval(fetchData, 5000);
-    
     return () => clearInterval(interval);
   }, []);
 
@@ -67,6 +73,10 @@ export default function DashboardPage() {
             <span className="text-sm text-muted-foreground">
               Last update: {lastUpdate.toLocaleTimeString()}
             </span>
+            <Button onClick={simulateEvent} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Simulate Event
+            </Button>
             <Button onClick={fetchData} disabled={isLoading} size="sm" variant="outline">
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
@@ -78,7 +88,6 @@ export default function DashboardPage() {
           <div className="mb-6 p-4 rounded-lg border border-destructive bg-destructive/10 text-destructive">
             <p className="font-medium">Error loading data</p>
             <p className="text-sm">{error}</p>
-            <p className="text-sm mt-2">Make sure the Python backend is running on http://localhost:5000</p>
           </div>
         )}
 
