@@ -74,7 +74,6 @@ export default function StatisticsPage() {
           <div className="mb-6 p-4 rounded-lg border border-destructive bg-destructive/10 text-destructive">
             <p className="font-medium">Error loading statistics</p>
             <p className="text-sm">{error}</p>
-            <p className="text-sm mt-2">Make sure the Python backend is running on http://localhost:5000</p>
           </div>
         )}
 
