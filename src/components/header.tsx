@@ -4,6 +4,7 @@ import { Shield, Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { ModeIndicator } from "./mode-indicator";
 
 export const Header = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -44,7 +45,11 @@ export const Header = () => {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block">
+            <ModeIndicator />
+          </div>
+          
           <Button
             variant="ghost"
             size="icon"
@@ -68,6 +73,9 @@ export const Header = () => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background">
           <nav className="container flex flex-col gap-4 py-4 px-4">
+            <div className="sm:hidden pb-2">
+              <ModeIndicator />
+            </div>
             <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               Dashboard
             </Link>
