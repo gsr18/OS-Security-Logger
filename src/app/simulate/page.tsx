@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { WebGLBackground } from "@/components/webgl-background";
 import { 
   ShieldAlert, 
   KeyRound, 
@@ -730,7 +731,7 @@ const securityEvents: SecurityEventType[] = [
 ];
 
 const severityColors = {
-  info: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+  info: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
   warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
   error: "bg-red-500/10 text-red-400 border-red-500/30",
   critical: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30"
@@ -740,7 +741,7 @@ const categoryColors: Record<string, string> = {
   "Authentication": "bg-cyan-500/10 text-cyan-400",
   "Privilege Escalation": "bg-orange-500/10 text-orange-400",
   "Network": "bg-violet-500/10 text-violet-400",
-  "System": "bg-emerald-500/10 text-emerald-400",
+  "System": "bg-primary/10 text-primary",
   "Kernel": "bg-rose-500/10 text-rose-400",
   "Hardware": "bg-slate-500/10 text-slate-400",
   "User Management": "bg-yellow-500/10 text-yellow-400",
@@ -806,29 +807,30 @@ export default function SimulatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative">
+      <WebGLBackground />
       <Header />
       
-      <main className="container px-4 py-8">
+      <main className="container px-4 py-8 relative z-10">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="p-2 bg-primary/20 rounded-lg border border-primary/30 pulse-glow">
               <ShieldAlert className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold">Security Event Simulator</h1>
+            <h1 className="text-3xl font-bold glow-text">Security Event Simulator</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground terminal-text">
             Click to trigger security events. Each event flows through: Log → Parse → Analyze → Alert
           </p>
         </div>
 
-        {/* OS Filter */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-sm font-medium text-muted-foreground mr-2">Operating System:</span>
+          <span className="text-sm font-medium text-muted-foreground mr-2 terminal-text">Operating System:</span>
           <Button
             variant={selectedOS === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedOS("all")}
+            className={selectedOS === "all" ? "bg-primary text-primary-foreground" : "border-primary/30 hover:bg-primary/10"}
           >
             All
           </Button>
@@ -838,7 +840,7 @@ export default function SimulatePage() {
               variant={selectedOS === os ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedOS(os)}
-              className="gap-1.5"
+              className={`gap-1.5 ${selectedOS === os ? "bg-primary text-primary-foreground" : "border-primary/30 hover:bg-primary/10"}`}
             >
               <span>{osInfo[os].icon}</span>
               {osInfo[os].name}
@@ -846,24 +848,22 @@ export default function SimulatePage() {
           ))}
         </div>
 
-        {/* Category Filter */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          <span className="text-sm font-medium text-muted-foreground mr-2 self-center">Category:</span>
+          <span className="text-sm font-medium text-muted-foreground mr-2 self-center terminal-text">Category:</span>
           {categories.map(cat => (
             <Button
               key={cat}
               variant={selectedCategory === cat ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedCategory(cat)}
-              className="capitalize"
+              className={`capitalize ${selectedCategory === cat ? "bg-primary text-primary-foreground" : "border-primary/30 hover:bg-primary/10"}`}
             >
               {cat}
             </Button>
           ))}
         </div>
 
-        {/* Event count */}
-        <div className="mb-4 text-sm text-muted-foreground">
+        <div className="mb-4 text-sm text-muted-foreground terminal-text">
           Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
         </div>
 
@@ -876,19 +876,19 @@ export default function SimulatePage() {
             return (
               <div
                 key={event.id}
-                className={`relative p-5 rounded-xl border bg-card transition-all duration-300 ${
-                  wasTriggered ? "ring-2 ring-green-500 border-green-500" : "border-border hover:border-primary/50"
+                className={`relative p-5 rounded-xl glass-card transition-all duration-300 ${
+                  wasTriggered ? "ring-2 ring-primary border-primary" : "hover:border-primary/40"
                 }`}
               >
                 {wasTriggered && (
-                  <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-green-500 animate-pulse">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 text-xs text-primary animate-pulse glow-text">
                     <CheckCircle className="h-3.5 w-3.5" />
                     Triggered!
                   </div>
                 )}
 
                 <div className="flex items-start gap-3 mb-3">
-                  <div className={`p-2.5 rounded-lg ${severityColors[event.severity]}`}>
+                  <div className={`p-2.5 rounded-lg border ${severityColors[event.severity]}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -908,17 +908,17 @@ export default function SimulatePage() {
                   {event.description}
                 </p>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 flex-wrap">
                   <span className={`px-2 py-0.5 rounded border ${severityColors[event.severity]}`}>
                     {event.severity}
                   </span>
-                  <span className="font-mono bg-muted px-2 py-0.5 rounded truncate">
+                  <span className="font-mono bg-muted/30 px-2 py-0.5 rounded truncate border border-primary/20">
                     {event.eventType}
                   </span>
                 </div>
 
                 {event.detectsAlert && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-500 mb-4">
+                  <div className="flex items-center gap-1.5 text-xs text-amber-400 mb-4">
                     <AlertTriangle className="h-3 w-3" />
                     <span>Triggers: {event.detectsAlert}</span>
                   </div>
@@ -929,7 +929,7 @@ export default function SimulatePage() {
                     size="sm"
                     onClick={() => triggerEvent(event)}
                     disabled={isLoading}
-                    className="flex-1"
+                    className="flex-1 bg-primary/20 border border-primary/50 hover:bg-primary/30 text-primary"
                   >
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -942,6 +942,7 @@ export default function SimulatePage() {
                     size="sm"
                     variant="outline"
                     onClick={() => viewEventDetails(event)}
+                    className="border-primary/30 hover:bg-primary/10"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
