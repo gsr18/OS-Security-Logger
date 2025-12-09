@@ -1,4 +1,4 @@
-import { Shield, X, CheckCircle, Terminal, AlertTriangle, Server, Flame, Network, User, Clock, LogIn, LogOut } from "lucide-react";
+import { Shield, X, CheckCircle, Terminal, AlertTriangle, Server, Flame, Network, User, Clock, LogIn, LogOut, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -42,34 +42,36 @@ const eventTypeIcons: Record<string, React.ElementType> = {
   SYSTEM_WARNING: AlertTriangle,
 };
 
-const eventTypeColors: Record<string, string> = {
-  AUTH_FAILURE: "text-red-600 dark:text-red-400",
-  AUTH_SUCCESS: "text-green-600 dark:text-green-400",
-  FAILED_LOGIN: "text-red-600 dark:text-red-400",
-  SUCCESS_LOGIN: "text-green-600 dark:text-green-400",
-  SUDO_SUCCESS: "text-green-600 dark:text-green-400",
-  SUDO_FAILURE: "text-red-600 dark:text-red-400",
-  SUDO_COMMAND: "text-yellow-600 dark:text-yellow-400",
-  PRIV_ESCALATION: "text-orange-600 dark:text-orange-400",
-  FIREWALL_BLOCK: "text-red-600 dark:text-red-400",
-  FIREWALL_ALLOW: "text-green-600 dark:text-green-400",
-  FIREWALL_EVENT: "text-blue-600 dark:text-blue-400",
-  SERVICE_START: "text-green-600 dark:text-green-400",
-  SERVICE_STOP: "text-yellow-600 dark:text-yellow-400",
-  SERVICE_FAILURE: "text-red-600 dark:text-red-400",
-  KERNEL_WARNING: "text-yellow-600 dark:text-yellow-400",
-  KERNEL_ERROR: "text-red-600 dark:text-red-400",
-  KERNEL_OOM: "text-red-600 dark:text-red-400",
-  KERNEL_SEGFAULT: "text-red-600 dark:text-red-400",
-  SESSION_START: "text-blue-600 dark:text-blue-400",
-  SESSION_END: "text-blue-600 dark:text-blue-400",
-  USER_CREATED: "text-purple-600 dark:text-purple-400",
-  PASSWORD_CHANGE: "text-purple-600 dark:text-purple-400",
-  GROUP_MEMBERSHIP_CHANGE: "text-purple-600 dark:text-purple-400",
-  CONNECTION_CLOSED: "text-gray-600 dark:text-gray-400",
-  SYSTEM_ERROR: "text-red-600 dark:text-red-400",
-  SYSTEM_WARNING: "text-yellow-600 dark:text-yellow-400",
+const eventTypeColors: Record<string, { text: string; bg: string; border: string }> = {
+  AUTH_FAILURE: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  AUTH_SUCCESS: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+  FAILED_LOGIN: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  SUCCESS_LOGIN: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+  SUDO_SUCCESS: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+  SUDO_FAILURE: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  SUDO_COMMAND: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+  PRIV_ESCALATION: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" },
+  FIREWALL_BLOCK: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  FIREWALL_ALLOW: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+  FIREWALL_EVENT: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30" },
+  SERVICE_START: { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" },
+  SERVICE_STOP: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+  SERVICE_FAILURE: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  KERNEL_WARNING: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
+  KERNEL_ERROR: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  KERNEL_OOM: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  KERNEL_SEGFAULT: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  SESSION_START: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30" },
+  SESSION_END: { text: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/30" },
+  USER_CREATED: { text: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30" },
+  PASSWORD_CHANGE: { text: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30" },
+  GROUP_MEMBERSHIP_CHANGE: { text: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/30" },
+  CONNECTION_CLOSED: { text: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/30" },
+  SYSTEM_ERROR: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" },
+  SYSTEM_WARNING: { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" },
 };
+
+const defaultColors = { text: "text-primary", bg: "bg-primary/10", border: "border-primary/30" };
 
 export const EventCard = ({ 
   timestamp, 
@@ -81,49 +83,61 @@ export const EventCard = ({
   rawMessage 
 }: EventCardProps) => {
   const Icon = eventTypeIcons[eventType] || Shield;
-  const color = eventTypeColors[eventType] || "text-muted-foreground";
+  const colors = eventTypeColors[eventType] || defaultColors;
 
   return (
-    <div className="p-4 rounded-lg border border-border bg-card hover:shadow-md transition-shadow">
+    <div className="glass-card p-4 rounded-lg hover:border-primary/40 transition-all group">
       <div className="flex items-start gap-3">
-        <div className={cn("p-2 rounded-lg bg-muted", color)}>
+        <div className={cn("p-2 rounded-lg border", colors.bg, colors.border, colors.text)}>
           <Icon className="h-4 w-4" />
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="outline" className="font-mono text-xs">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <Badge 
+              variant="outline" 
+              className={cn("font-mono text-xs", colors.text, colors.border)}
+            >
               {eventType.replace(/_/g, " ")}
             </Badge>
-            <Badge variant="secondary" className="text-xs">
+            <Badge 
+              variant="secondary" 
+              className="text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
+            >
               {osName}
             </Badge>
           </div>
           
           <div className="space-y-1 text-sm">
             {username && (
-              <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">User:</span> {username}
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span className="font-medium text-foreground">{username}</span>
               </p>
             )}
             {sourceIp && (
-              <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">IP:</span> {sourceIp}
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Globe className="h-3 w-3" />
+                <span className="font-mono text-primary">{sourceIp}</span>
               </p>
             )}
             {processName && (
-              <p className="text-muted-foreground">
-                <span className="font-medium text-foreground">Process:</span> {processName}
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Terminal className="h-3 w-3" />
+                <span className="font-mono text-xs">{processName}</span>
               </p>
             )}
-            <p className="text-xs text-muted-foreground font-mono mt-2 p-2 bg-muted rounded">
-              {rawMessage}
-            </p>
+            <div className="mt-2 p-2 rounded bg-muted/30 border border-border/50">
+              <p className="text-xs text-muted-foreground font-mono leading-relaxed break-all">
+                {rawMessage}
+              </p>
+            </div>
           </div>
           
-          <p className="text-xs text-muted-foreground mt-2">
-            {new Date(timestamp).toLocaleString()}
-          </p>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
+            <Clock className="h-3 w-3" />
+            <span className="terminal-text">{new Date(timestamp).toLocaleString()}</span>
+          </div>
         </div>
       </div>
     </div>
