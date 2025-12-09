@@ -45,6 +45,9 @@ export const Header = () => {
               <Link href="/statistics" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Statistics
               </Link>
+              <Link href="/simulate" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Simulate
+              </Link>
             </nav>
           )}
         </div>
@@ -130,6 +133,9 @@ export const Header = () => {
             </Link>
             <Link href="/statistics" className="text-sm font-medium text-muted-foreground hover:text-foreground">
               Statistics
+            </Link>
+            <Link href="/simulate" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+              Simulate
             </Link>
           </nav>
         </div>
