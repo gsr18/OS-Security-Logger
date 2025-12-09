@@ -16,10 +16,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  allowedDevOrigins: [
-    'www.orchids.app',
-    '*.proxy.daytona.works',
-  ],
   outputFileTracingRoot: path.resolve(__dirname, '../../'),
   typescript: {
     ignoreBuildErrors: true,
@@ -37,4 +33,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-// Orchids restart: 1765302872864
+// Orchids restart: 1765304556904
