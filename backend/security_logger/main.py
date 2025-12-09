@@ -13,6 +13,8 @@ from .analysis.engine import RuleEngine
 from .events import SecurityEvent
 from .log_reader import MultiLogReader, get_available_log_files
 from .parsing.linux_parser import LinuxParser
+from .database import init_db
+from .auth import ensure_admin_exists
 
 logger = logging.getLogger("security_logger.main")
 
@@ -25,6 +27,9 @@ class SecurityLogger:
         
         log_level = self.config.get('logging.level', 'INFO')
         setup_logging(log_level)
+        
+        init_db()
+        ensure_admin_exists()
         
         db_path = self.config.get('database.path', './security_events.db')
         self.database = Database(db_path)
