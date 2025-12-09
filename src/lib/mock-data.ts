@@ -1,6 +1,11 @@
 import { SecurityEvent, Alert, Stats } from "./api";
 
-const EVENT_TYPES = ["FAILED_LOGIN", "SUCCESS_LOGIN", "SUDO_COMMAND", "PRIV_ESCALATION", "AUTH_FAILURE", "AUTH_SUCCESS", "FIREWALL_BLOCK", "SESSION_START"] as const;
+const EVENT_TYPES = [
+  "FAILED_LOGIN", "SUCCESS_LOGIN", "SUDO_COMMAND", "PRIV_ESCALATION", 
+  "AUTH_FAILURE", "AUTH_SUCCESS", "FIREWALL_BLOCK", "SESSION_START",
+  "SESSION_END", "SUDO_SUCCESS", "SUDO_FAILURE", "CONNECTION_CLOSED",
+  "SERVICE_START", "SERVICE_STOP", "SERVICE_FAILURE", "KERNEL_WARNING", "KERNEL_ERROR"
+] as const;
 
 const OS_NAMES = ["Linux", "Windows", "macOS"] as const;
 const SEVERITIES = ["critical", "high", "medium", "low", "info", "warning", "error"] as const;
@@ -166,15 +171,15 @@ export function generateEvent(): SecurityEvent {
     event_time: now.toISOString(),
     timestamp: now.toISOString(),
     host: host,
-    process: processName,
-    process_name: processName,
+    process: processName ?? undefined,
+    process_name: processName ?? undefined,
     pid: Math.floor(Math.random() * 65000) + 1000,
     event_type: eventType,
     user: username,
     username: username,
-    src_ip: sourceIp,
-    source_ip: sourceIp,
-    dst_ip: eventType.includes("FIREWALL") ? randomIp() : null,
+    src_ip: sourceIp ?? undefined,
+    source_ip: sourceIp ?? undefined,
+    dst_ip: eventType.includes("FIREWALL") ? randomIp() : undefined,
     severity: getEventSeverity(eventType),
     log_source: getLogSource(eventType),
     raw_message: generateMessage(eventType, username, sourceIp),
