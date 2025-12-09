@@ -52,13 +52,13 @@ class SecurityEvent:
     severity: str
     raw_message: str
     host: Optional[str] = None
-    process: Optional[str] = None
+    process_name: Optional[str] = None
     pid: Optional[int] = None
-    user: Optional[str] = None
-    src_ip: Optional[str] = None
+    username: Optional[str] = None
+    source_ip: Optional[str] = None
     dst_ip: Optional[str] = None
     log_source: Optional[str] = None
-    platform: str = "linux"
+    os_name: str = "linux"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -68,13 +68,13 @@ class SecurityEvent:
             "severity": self.severity,
             "raw_message": self.raw_message,
             "host": self.host,
-            "process": self.process,
+            "process_name": self.process_name,
             "pid": self.pid,
-            "user": self.user,
-            "src_ip": self.src_ip,
+            "username": self.username,
+            "source_ip": self.source_ip,
             "dst_ip": self.dst_ip,
             "log_source": self.log_source,
-            "platform": self.platform,
+            "os_name": self.os_name,
         }
 
 
@@ -139,61 +139,61 @@ class LinuxLogParser:
             severity="info",
             raw_message=line,
             host=host,
-            process=process.split('/')[0],
+            process_name=process.split('/')[0],
             pid=int(pid) if pid else None,
             log_source="auth",
-            platform="linux"
+            os_name="linux"
         )
         
         m = cls.FAILED_PASSWORD.search(message)
         if m:
             event.event_type = "AUTH_FAILURE"
-            event.user = m.group(1)
-            event.src_ip = m.group(2)
+            event.username = m.group(1)
+            event.source_ip = m.group(2)
             event.severity = "warning"
             return event
         
         m = cls.ACCEPTED_PASSWORD.search(message) or cls.ACCEPTED_PUBLICKEY.search(message)
         if m:
             event.event_type = "AUTH_SUCCESS"
-            event.user = m.group(1)
-            event.src_ip = m.group(2)
+            event.username = m.group(1)
+            event.source_ip = m.group(2)
             event.severity = "info"
             return event
         
         m = cls.INVALID_USER.search(message)
         if m:
             event.event_type = "AUTH_FAILURE"
-            event.user = m.group(1)
-            event.src_ip = m.group(2)
+            event.username = m.group(1)
+            event.source_ip = m.group(2)
             event.severity = "warning"
             return event
         
         m = cls.SUDO_COMMAND.search(message)
         if m:
             event.event_type = "SUDO_SUCCESS"
-            event.user = m.group(1)
+            event.username = m.group(1)
             event.severity = "info"
             return event
         
         m = cls.SUDO_FAILURE.search(message) or cls.SUDO_AUTH_FAILURE.search(message)
         if m:
             event.event_type = "SUDO_FAILURE"
-            event.user = m.group(1)
+            event.username = m.group(1)
             event.severity = "warning"
             return event
         
         m = cls.SESSION_OPENED.search(message)
         if m:
             event.event_type = "SESSION_START"
-            event.user = m.group(1)
+            event.username = m.group(1)
             event.severity = "info"
             return event
         
         m = cls.SESSION_CLOSED.search(message)
         if m:
             event.event_type = "SESSION_END"
-            event.user = m.group(1)
+            event.username = m.group(1)
             event.severity = "info"
             return event
         
@@ -214,9 +214,9 @@ class LinuxLogParser:
             severity="info",
             raw_message=line,
             host=host,
-            process="kernel",
+            process_name="kernel",
             log_source="kernel",
-            platform="linux"
+            os_name="linux"
         )
         
         lower_msg = message.lower()
@@ -244,15 +244,15 @@ class LinuxLogParser:
             event_type="FIREWALL_EVENT",
             severity="info",
             raw_message=line,
-            process="firewall",
+            process_name="firewall",
             log_source="firewall",
-            platform="linux"
+            os_name="linux"
         )
         
         m = cls.UFW_PATTERN.search(line)
         if m:
             action = m.group(1)
-            event.src_ip = m.group(2)
+            event.source_ip = m.group(2)
             event.dst_ip = m.group(3)
             
             if action == "BLOCK":
@@ -268,7 +268,7 @@ class LinuxLogParser:
             event.severity = "warning"
             ip_match = re.search(r'SRC=([\d.]+)', line)
             if ip_match:
-                event.src_ip = ip_match.group(1)
+                event.source_ip = ip_match.group(1)
             return event
         
         return None
@@ -291,10 +291,10 @@ class LinuxLogParser:
                 severity="error",
                 raw_message=line,
                 host=host,
-                process=process.split('/')[0],
+                process_name=process.split('/')[0],
                 pid=int(pid) if pid else None,
                 log_source="syslog",
-                platform="linux"
+                os_name="linux"
             )
         
         if 'started' in lower_msg or 'starting' in lower_msg:
@@ -304,10 +304,10 @@ class LinuxLogParser:
                 severity="info",
                 raw_message=line,
                 host=host,
-                process=process.split('/')[0],
+                process_name=process.split('/')[0],
                 pid=int(pid) if pid else None,
                 log_source="syslog",
-                platform="linux"
+                os_name="linux"
             )
         
         if 'stopped' in lower_msg or 'stopping' in lower_msg:
@@ -317,10 +317,10 @@ class LinuxLogParser:
                 severity="info",
                 raw_message=line,
                 host=host,
-                process=process.split('/')[0],
+                process_name=process.split('/')[0],
                 pid=int(pid) if pid else None,
                 log_source="syslog",
-                platform="linux"
+                os_name="linux"
             )
         
         return None
@@ -349,49 +349,49 @@ class AlertEngine:
     def check_event(self, event: SecurityEvent) -> Optional[Alert]:
         now = datetime.now()
         
-        if event.event_type == "AUTH_FAILURE" and event.src_ip:
-            self.failed_logins[event.src_ip].append(now)
-            self.failed_logins[event.src_ip] = self._cleanup_old_entries(
-                self.failed_logins[event.src_ip], self.brute_force_window
+        if event.event_type == "AUTH_FAILURE" and event.source_ip:
+            self.failed_logins[event.source_ip].append(now)
+            self.failed_logins[event.source_ip] = self._cleanup_old_entries(
+                self.failed_logins[event.source_ip], self.brute_force_window
             )
             
-            if len(self.failed_logins[event.src_ip]) >= self.brute_force_threshold:
-                count = len(self.failed_logins[event.src_ip])
-                self.failed_logins[event.src_ip] = []
+            if len(self.failed_logins[event.source_ip]) >= self.brute_force_threshold:
+                count = len(self.failed_logins[event.source_ip])
+                self.failed_logins[event.source_ip] = []
                 return Alert(
                     alert_type="BRUTE_FORCE",
                     severity="critical",
-                    description=f"Brute force attack detected: {count} failed login attempts from IP {event.src_ip} within {int(self.brute_force_window.total_seconds() / 60)} minutes"
+                    description=f"Brute force attack detected: {count} failed login attempts from IP {event.source_ip} within {int(self.brute_force_window.total_seconds() / 60)} minutes"
                 )
         
-        if event.event_type == "FIREWALL_BLOCK" and event.src_ip:
-            self.firewall_blocks[event.src_ip].append(now)
-            self.firewall_blocks[event.src_ip] = self._cleanup_old_entries(
-                self.firewall_blocks[event.src_ip], self.port_scan_window
+        if event.event_type == "FIREWALL_BLOCK" and event.source_ip:
+            self.firewall_blocks[event.source_ip].append(now)
+            self.firewall_blocks[event.source_ip] = self._cleanup_old_entries(
+                self.firewall_blocks[event.source_ip], self.port_scan_window
             )
             
-            if len(self.firewall_blocks[event.src_ip]) >= self.port_scan_threshold:
-                count = len(self.firewall_blocks[event.src_ip])
-                self.firewall_blocks[event.src_ip] = []
+            if len(self.firewall_blocks[event.source_ip]) >= self.port_scan_threshold:
+                count = len(self.firewall_blocks[event.source_ip])
+                self.firewall_blocks[event.source_ip] = []
                 return Alert(
                     alert_type="PORT_SCAN",
                     severity="warning",
-                    description=f"Possible port scan detected: {count} blocked connections from IP {event.src_ip} within {int(self.port_scan_window.total_seconds() / 60)} minutes"
+                    description=f"Possible port scan detected: {count} blocked connections from IP {event.source_ip} within {int(self.port_scan_window.total_seconds() / 60)} minutes"
                 )
         
-        if event.event_type == "SUDO_FAILURE" and event.user:
-            self.sudo_failures[event.user].append(now)
-            self.sudo_failures[event.user] = self._cleanup_old_entries(
-                self.sudo_failures[event.user], self.sudo_failure_window
+        if event.event_type == "SUDO_FAILURE" and event.username:
+            self.sudo_failures[event.username].append(now)
+            self.sudo_failures[event.username] = self._cleanup_old_entries(
+                self.sudo_failures[event.username], self.sudo_failure_window
             )
             
-            if len(self.sudo_failures[event.user]) >= self.sudo_failure_threshold:
-                count = len(self.sudo_failures[event.user])
-                self.sudo_failures[event.user] = []
+            if len(self.sudo_failures[event.username]) >= self.sudo_failure_threshold:
+                count = len(self.sudo_failures[event.username])
+                self.sudo_failures[event.username] = []
                 return Alert(
                     alert_type="PRIVILEGE_ESCALATION",
                     severity="critical",
-                    description=f"Possible privilege escalation attempt: {count} failed sudo attempts by user '{event.user}' within {int(self.sudo_failure_window.total_seconds() / 60)} minutes"
+                    description=f"Possible privilege escalation attempt: {count} failed sudo attempts by user '{event.username}' within {int(self.sudo_failure_window.total_seconds() / 60)} minutes"
                 )
         
         if event.event_type in ("KERNEL_ERROR", "KERNEL_WARNING", "KERNEL_SEGFAULT", "KERNEL_OOM"):
@@ -559,7 +559,7 @@ class OSIngestor:
         if event:
             event_id = self.insert_event(event)
             if event_id:
-                logger.debug(f"Event {event_id}: {event.event_type} - {event.user}")
+                logger.debug(f"Event {event_id}: {event.event_type} - {event.username}")
                 
                 alert = self.alert_engine.check_event(event)
                 if alert:
@@ -570,15 +570,15 @@ class OSIngestor:
         import random
         
         event_templates = [
-            {"event_type": "AUTH_FAILURE", "severity": "warning", "user": "admin", "src_ip": f"192.168.1.{random.randint(1,254)}"},
-            {"event_type": "AUTH_SUCCESS", "severity": "info", "user": "admin", "src_ip": "10.0.0.5"},
-            {"event_type": "SUDO_SUCCESS", "severity": "info", "user": "developer"},
-            {"event_type": "SUDO_FAILURE", "severity": "warning", "user": "www-data"},
-            {"event_type": "FIREWALL_BLOCK", "severity": "warning", "src_ip": f"203.0.113.{random.randint(1,254)}"},
-            {"event_type": "SERVICE_START", "severity": "info", "process": "nginx"},
-            {"event_type": "SERVICE_STOP", "severity": "info", "process": "apache2"},
-            {"event_type": "KERNEL_WARNING", "severity": "warning", "process": "kernel"},
-            {"event_type": "SESSION_START", "severity": "info", "user": "root"},
+            {"event_type": "AUTH_FAILURE", "severity": "warning", "username": "admin", "source_ip": f"192.168.1.{random.randint(1,254)}"},
+            {"event_type": "AUTH_SUCCESS", "severity": "info", "username": "admin", "source_ip": "10.0.0.5"},
+            {"event_type": "SUDO_SUCCESS", "severity": "info", "username": "developer"},
+            {"event_type": "SUDO_FAILURE", "severity": "warning", "username": "www-data"},
+            {"event_type": "FIREWALL_BLOCK", "severity": "warning", "source_ip": f"203.0.113.{random.randint(1,254)}"},
+            {"event_type": "SERVICE_START", "severity": "info", "process_name": "nginx"},
+            {"event_type": "SERVICE_STOP", "severity": "info", "process_name": "apache2"},
+            {"event_type": "KERNEL_WARNING", "severity": "warning", "process_name": "kernel"},
+            {"event_type": "SESSION_START", "severity": "info", "username": "root"},
         ]
         
         template = random.choice(event_templates)
@@ -588,11 +588,11 @@ class OSIngestor:
             severity=template["severity"],
             raw_message=f"[MOCK] {template['event_type']} event generated at {datetime.now().isoformat()}",
             host="mock-host",
-            process=template.get("process", "sshd"),
-            user=template.get("user"),
-            src_ip=template.get("src_ip"),
+            process_name=template.get("process_name", "sshd"),
+            username=template.get("username"),
+            source_ip=template.get("source_ip"),
             log_source="mock",
-            platform=platform.system().lower()
+            os_name=platform.system().lower()
         )
         
         event_id = self.insert_event(event)
