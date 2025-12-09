@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { initializeMockData, storedEvents, storedAlerts } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase";
 
 export async function GET() {
-  initializeMockData();
-  
+  const { error } = await supabase.from('security_events').select('id').limit(1);
+
   return NextResponse.json({
-    status: "ok",
+    status: error ? "error" : "ok",
     backend: "nextjs",
-    db: "mock",
-    mode: "mock",
+    db: error ? "disconnected" : "connected",
+    mode: "supabase",
     timestamp: new Date().toISOString(),
-    events_count: storedEvents.length,
-    alerts_count: storedAlerts.length
   });
 }
