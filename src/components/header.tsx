@@ -1,10 +1,9 @@
 "use client";
 
-import { Shield, Menu, Sun, Moon, LogOut, User, Terminal, Radio } from "lucide-react";
+import { Shield, Menu, Sun, Moon, LogOut, User, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ModeIndicator } from "./mode-indicator";
 import { useAuth } from "@/lib/auth";
 
 export const Header = () => {
@@ -13,13 +12,26 @@ export const Header = () => {
   const { user, isAuthenticated, logout, isLoading } = useAuth();
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
+    const savedTheme = localStorage.getItem("theme");
+    const isDark = savedTheme === "dark" || (!savedTheme && true);
     setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }, []);
 
   const toggleDarkMode = () => {
-    document.documentElement.classList.toggle("dark");
-    setDarkMode(!darkMode);
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
   };
 
   return (
@@ -50,7 +62,7 @@ export const Header = () => {
                   href={item.href} 
                   className="px-3 py-1.5 text-sm font-mono text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-all"
                 >
-                  ./{item.label}
+                  {item.label}
                 </Link>
               ))}
             </nav>
@@ -60,7 +72,6 @@ export const Header = () => {
         <div className="flex items-center gap-2">
           {isAuthenticated && (
             <div className="hidden sm:flex items-center gap-2">
-              <ModeIndicator />
               <div className="flex items-center gap-2 px-2.5 py-1 glass-card rounded text-xs font-mono">
                 <User className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">{user?.email}</span>
@@ -118,7 +129,6 @@ export const Header = () => {
         <div className="md:hidden border-t border-primary/20 bg-background/95 backdrop-blur-xl">
           <nav className="container flex flex-col gap-1 py-3 px-4">
             <div className="sm:hidden pb-3 mb-2 border-b border-primary/20 flex flex-col gap-2">
-              <ModeIndicator />
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                 <User className="h-3 w-3" />
                 <span>{user?.email}</span>
@@ -139,7 +149,7 @@ export const Header = () => {
                 href={item.href} 
                 className="px-3 py-2 text-sm font-mono text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-all"
               >
-                ./{item.label}
+                {item.label}
               </Link>
             ))}
           </nav>
