@@ -2,7 +2,7 @@
  * API client for security logger backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export interface SecurityEvent {
   id: number;
@@ -50,10 +50,7 @@ export class SecurityLoggerAPI {
     this.baseUrl = baseUrl;
   }
 
-  /**
-   * Health check
-   */
-  async health(): Promise<{ status: string; timestamp: string }> {
+  async health(): Promise<{ status: string; timestamp: string; mode?: string }> {
     const response = await fetch(`${this.baseUrl}/api/health`);
     if (!response.ok) {
       throw new Error('API health check failed');
@@ -61,9 +58,6 @@ export class SecurityLoggerAPI {
     return response.json();
   }
 
-  /**
-   * Get security events
-   */
   async getEvents(params?: {
     limit?: number;
     type?: string;
@@ -87,9 +81,6 @@ export class SecurityLoggerAPI {
     return response.json();
   }
 
-  /**
-   * Get alerts
-   */
   async getAlerts(params?: {
     limit?: number;
     severity?: string;
@@ -111,9 +102,6 @@ export class SecurityLoggerAPI {
     return response.json();
   }
 
-  /**
-   * Get statistics
-   */
   async getStats(): Promise<Stats> {
     const response = await fetch(`${this.baseUrl}/api/stats`);
     
@@ -123,7 +111,19 @@ export class SecurityLoggerAPI {
     
     return response.json();
   }
+
+  async generateEvent(): Promise<SecurityEvent> {
+    const response = await fetch(`${this.baseUrl}/api/events`, {
+      method: 'POST',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to generate event: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data.event;
+  }
 }
 
-// Export singleton instance
 export const api = new SecurityLoggerAPI();
