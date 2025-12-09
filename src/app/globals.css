@@ -4,39 +4,39 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: #030806;
-  --color-foreground: #e0f2e9;
+  --color-background: var(--bg-color);
+  --color-foreground: var(--fg-color);
   --font-sans: var(--font-geist-sans);
   --font-mono: 'JetBrains Mono', var(--font-geist-mono);
-  --color-sidebar-ring: #00ff88;
-  --color-sidebar-border: rgba(0, 255, 136, 0.2);
-  --color-sidebar-accent-foreground: #00ff88;
-  --color-sidebar-accent: rgba(0, 255, 136, 0.1);
-  --color-sidebar-primary-foreground: #030806;
-  --color-sidebar-primary: #00ff88;
-  --color-sidebar-foreground: #e0f2e9;
-  --color-sidebar: rgba(10, 25, 18, 0.95);
+  --color-sidebar-ring: var(--primary-color);
+  --color-sidebar-border: var(--border-color);
+  --color-sidebar-accent-foreground: var(--primary-color);
+  --color-sidebar-accent: var(--accent-color);
+  --color-sidebar-primary-foreground: var(--bg-color);
+  --color-sidebar-primary: var(--primary-color);
+  --color-sidebar-foreground: var(--fg-color);
+  --color-sidebar: var(--card-color);
   --color-chart-5: #c44dff;
   --color-chart-4: #ffd93d;
   --color-chart-3: #ff6b6b;
   --color-chart-2: #00ccff;
-  --color-chart-1: #00ff88;
-  --color-ring: #00ff88;
-  --color-input: rgba(0, 255, 136, 0.15);
-  --color-border: rgba(0, 255, 136, 0.2);
+  --color-chart-1: var(--primary-color);
+  --color-ring: var(--primary-color);
+  --color-input: var(--input-color);
+  --color-border: var(--border-color);
   --color-destructive: #ff4444;
-  --color-accent-foreground: #00ff88;
-  --color-accent: rgba(0, 255, 136, 0.15);
-  --color-muted-foreground: #6b9b80;
-  --color-muted: rgba(0, 255, 136, 0.05);
-  --color-secondary-foreground: #00ff88;
-  --color-secondary: rgba(0, 255, 136, 0.1);
-  --color-primary-foreground: #030806;
-  --color-primary: #00ff88;
-  --color-popover-foreground: #e0f2e9;
-  --color-popover: #0a1912;
-  --color-card-foreground: #e0f2e9;
-  --color-card: rgba(10, 25, 18, 0.8);
+  --color-accent-foreground: var(--primary-color);
+  --color-accent: var(--accent-color);
+  --color-muted-foreground: var(--muted-fg);
+  --color-muted: var(--muted-color);
+  --color-secondary-foreground: var(--primary-color);
+  --color-secondary: var(--secondary-color);
+  --color-primary-foreground: var(--primary-fg);
+  --color-primary: var(--primary-color);
+  --color-popover-foreground: var(--fg-color);
+  --color-popover: var(--popover-color);
+  --color-card-foreground: var(--fg-color);
+  --color-card: var(--card-color);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -44,19 +44,58 @@
   --radius: 0.5rem;
 }
 
+:root {
+  --bg-color: #f8faf9;
+  --fg-color: #1a2e24;
+  --primary-color: #059669;
+  --primary-fg: #ffffff;
+  --muted-fg: #5a7568;
+  --muted-color: rgba(5, 150, 105, 0.08);
+  --secondary-color: rgba(5, 150, 105, 0.12);
+  --accent-color: rgba(5, 150, 105, 0.15);
+  --border-color: rgba(5, 150, 105, 0.25);
+  --input-color: rgba(5, 150, 105, 0.1);
+  --card-color: rgba(255, 255, 255, 0.9);
+  --popover-color: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(5, 150, 105, 0.2);
+  --stat-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 249, 0.95));
+  --glow-color: rgba(5, 150, 105, 0.4);
+}
+
+.dark {
+  --bg-color: #030806;
+  --fg-color: #e0f2e9;
+  --primary-color: #00ff88;
+  --primary-fg: #030806;
+  --muted-fg: #6b9b80;
+  --muted-color: rgba(0, 255, 136, 0.05);
+  --secondary-color: rgba(0, 255, 136, 0.1);
+  --accent-color: rgba(0, 255, 136, 0.15);
+  --border-color: rgba(0, 255, 136, 0.2);
+  --input-color: rgba(0, 255, 136, 0.15);
+  --card-color: rgba(10, 25, 18, 0.8);
+  --popover-color: #0a1912;
+  --glass-bg: rgba(10, 25, 18, 0.6);
+  --glass-border: rgba(0, 255, 136, 0.15);
+  --stat-card-bg: linear-gradient(135deg, rgba(10, 25, 18, 0.8), rgba(5, 15, 10, 0.9));
+  --glow-color: rgba(0, 255, 136, 0.5);
+}
+
 * {
-  border-color: rgba(0, 255, 136, 0.2);
+  border-color: var(--border-color);
 }
 
 html {
-  background-color: #030806 !important;
-  color: #e0f2e9 !important;
+  background-color: var(--bg-color);
+  color: var(--fg-color);
 }
 
 body {
-  background-color: #030806 !important;
-  color: #e0f2e9 !important;
+  background-color: var(--bg-color);
+  color: var(--fg-color);
   font-feature-settings: "rlig" 1, "calt" 1;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 nextjs-portal {
@@ -64,17 +103,30 @@ nextjs-portal {
 }
 
 .glass-card {
-  background: rgba(10, 25, 18, 0.6) !important;
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 255, 136, 0.15) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.dark .glass-card {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(0, 255, 136, 0.1);
 }
 
 .glow-green {
+  box-shadow: 0 0 20px var(--glow-color), 0 0 40px rgba(5, 150, 105, 0.1);
+}
+
+.dark .glow-green {
   box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), 0 0 40px rgba(0, 255, 136, 0.1);
 }
 
 .glow-text {
+  text-shadow: 0 0 10px var(--glow-color), 0 0 20px rgba(5, 150, 105, 0.2);
+}
+
+.dark .glow-text {
   text-shadow: 0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
@@ -95,7 +147,7 @@ nextjs-portal {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
   animation: scan 3s linear infinite;
 }
 
@@ -109,14 +161,23 @@ nextjs-portal {
 }
 
 @keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px var(--glow-color); }
+  50% { box-shadow: 0 0 20px var(--glow-color), 0 0 40px rgba(5, 150, 105, 0.2); }
+}
+
+.dark .pulse-glow {
+  animation: pulse-glow-dark 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-dark {
   0%, 100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.3); }
   50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.6), 0 0 40px rgba(0, 255, 136, 0.3); }
 }
 
 .data-grid {
   background-image: 
-    linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -131,7 +192,7 @@ nextjs-portal {
 
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-  stroke: rgba(0, 255, 136, 0.1) !important;
+  stroke: var(--border-color) !important;
 }
 
 .recharts-tooltip-wrapper {
@@ -140,14 +201,14 @@ nextjs-portal {
 
 .stat-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(10, 25, 18, 0.8), rgba(5, 15, 10, 0.9)) !important;
-  border: 1px solid rgba(0, 255, 136, 0.2) !important;
+  background: var(--stat-card-bg);
+  border: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
-  border-color: rgba(0, 255, 136, 0.4) !important;
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 30px var(--glow-color);
   transform: translateY(-2px);
 }
 
@@ -158,7 +219,7 @@ nextjs-portal {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #00ff88, transparent);
+  background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -168,7 +229,7 @@ nextjs-portal {
 }
 
 .chart-container {
-  background: linear-gradient(180deg, rgba(10, 25, 18, 0.6), rgba(5, 15, 10, 0.8)) !important;
-  border: 1px solid rgba(0, 255, 136, 0.15) !important;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 0.5rem;
 }
