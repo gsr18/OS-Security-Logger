@@ -8,7 +8,7 @@ import { ModeIndicator } from "./mode-indicator";
 import { useAuth } from "@/lib/auth";
 
 export const Header = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout, isLoading } = useAuth();
 
