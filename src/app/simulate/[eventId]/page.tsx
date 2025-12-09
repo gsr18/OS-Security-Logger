@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { WebGLBackground } from "@/components/webgl-background";
 import { 
   ShieldAlert, 
   KeyRound, 
@@ -340,7 +341,7 @@ Jan 15 15:20:04 prod-web-01 sshd[6793]: Accepted password for root from 192.168.
 };
 
 const severityColors = {
-  info: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+  info: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
   warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
   error: "bg-red-500/10 text-red-400 border-red-500/30",
   critical: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30"
@@ -358,12 +359,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen relative">
+        <WebGLBackground />
         <Header />
-        <main className="container px-4 py-8">
-          <div className="text-center py-20">
+        <main className="container px-4 py-8 relative z-10">
+          <div className="text-center py-20 glass-card rounded-lg">
             <h1 className="text-2xl font-bold mb-4">Event Not Found</h1>
-            <Button asChild>
+            <Button asChild className="bg-primary/20 border border-primary/50 hover:bg-primary/30">
               <Link href="/simulate">Back to Simulator</Link>
             </Button>
           </div>
@@ -409,23 +411,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative">
+      <WebGLBackground />
       <Header />
       
-      <main className="container px-4 py-8 max-w-5xl">
-        <Button variant="ghost" size="sm" className="mb-6" onClick={() => router.back()}>
+      <main className="container px-4 py-8 max-w-5xl relative z-10">
+        <Button variant="ghost" size="sm" className="mb-6 border-primary/30 hover:bg-primary/10" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Simulator
         </Button>
 
         <div className="flex items-start gap-4 mb-8">
-          <div className={`p-4 rounded-xl ${severityColors[event.severity]}`}>
+          <div className={`p-4 rounded-xl border ${severityColors[event.severity]}`}>
             <Icon className="h-8 w-8" />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">{event.name}</h1>
-              <span className={`px-3 py-1 rounded-full text-sm ${severityColors[event.severity]}`}>
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <h1 className="text-3xl font-bold glow-text">{event.name}</h1>
+              <span className={`px-3 py-1 rounded-full text-sm border ${severityColors[event.severity]}`}>
                 {event.severity}
               </span>
             </div>
@@ -433,60 +436,60 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
           </div>
         </div>
 
-        <div className="flex gap-4 mb-8">
-          <Button onClick={triggerEvent} disabled={isLoading} size="lg">
+        <div className="flex gap-4 mb-8 flex-wrap">
+          <Button onClick={triggerEvent} disabled={isLoading} size="lg" className="bg-primary/20 border border-primary/50 hover:bg-primary/30 text-primary">
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
             ) : triggered ? (
-              <CheckCircle className="h-5 w-5 mr-2 text-green-400" />
+              <CheckCircle className="h-5 w-5 mr-2 text-primary" />
             ) : (
               <Play className="h-5 w-5 mr-2" />
             )}
             {triggered ? "Event Triggered!" : "Trigger This Event"}
           </Button>
-          <Button variant="outline" size="lg" asChild>
+          <Button variant="outline" size="lg" asChild className="border-primary/30 hover:bg-primary/10">
             <Link href="/events">View Events Log</Link>
           </Button>
           {event.detectsAlert && (
-            <Button variant="outline" size="lg" asChild>
+            <Button variant="outline" size="lg" asChild className="border-primary/30 hover:bg-primary/10">
               <Link href="/alerts">View Alerts</Link>
             </Button>
           )}
         </div>
 
         {pipelineResult && (
-          <div className="mb-8 p-6 rounded-xl border border-green-500/30 bg-green-500/5">
-            <h3 className="font-semibold text-green-400 mb-4 flex items-center gap-2">
+          <div className="mb-8 p-6 rounded-xl border border-primary/30 bg-primary/5 glass-card">
+            <h3 className="font-semibold text-primary mb-4 flex items-center gap-2 glow-text">
               <GitBranch className="h-5 w-5" />
               Pipeline Execution Result
             </h3>
             <div className="space-y-3 text-sm font-mono">
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-32">1. Raw Log:</span>
-                <span className="text-green-400 flex-1 break-all">{String(pipelineResult.step1_log)}</span>
+                <span className="text-primary flex-1 break-all">{String(pipelineResult.step1_log)}</span>
               </div>
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-32">2. Parsed:</span>
-                <span className="text-green-400">{JSON.stringify(pipelineResult.step2_parsed)}</span>
+                <span className="text-primary">{JSON.stringify(pipelineResult.step2_parsed)}</span>
               </div>
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-32">3. Analyzed:</span>
-                <span className="text-green-400">{String(pipelineResult.step3_analyzed)}</span>
+                <span className="text-primary">{String(pipelineResult.step3_analyzed)}</span>
               </div>
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-32">4. Stored:</span>
-                <span className="text-green-400">{String(pipelineResult.step4_stored)}</span>
+                <span className="text-primary">{String(pipelineResult.step4_stored)}</span>
               </div>
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-32">5. Alert:</span>
-                <span className="text-green-400">{String(pipelineResult.step5_alert)}</span>
+                <span className="text-primary">{String(pipelineResult.step5_alert)}</span>
               </div>
             </div>
           </div>
         )}
 
         <div className="grid gap-6">
-          <div className="p-6 rounded-xl border border-border bg-card">
+          <div className="p-6 rounded-xl glass-card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <Terminal className="h-5 w-5 text-primary" />
@@ -496,20 +499,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(event.triggerCode, "trigger")}
+                className="hover:bg-primary/10"
               >
                 {copiedSection === "trigger" ? (
-                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
               </Button>
             </div>
-            <pre className="bg-zinc-950 p-4 rounded-lg overflow-x-auto text-sm text-zinc-300 font-mono whitespace-pre-wrap">
+            <pre className="bg-background/80 p-4 rounded-lg overflow-x-auto text-sm text-primary font-mono whitespace-pre-wrap border border-primary/20">
               {event.triggerCode}
             </pre>
           </div>
 
-          <div className="p-6 rounded-xl border border-border bg-card">
+          <div className="p-6 rounded-xl glass-card">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <FileCode className="h-5 w-5 text-primary" />
@@ -519,24 +523,25 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                 variant="ghost"
                 size="sm"
                 onClick={() => copyToClipboard(event.rawLogExample, "log")}
+                className="hover:bg-primary/10"
               >
                 {copiedSection === "log" ? (
-                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
               </Button>
             </div>
-            <pre className="bg-zinc-950 p-4 rounded-lg overflow-x-auto text-sm text-emerald-400 font-mono whitespace-pre-wrap">
+            <pre className="bg-background/80 p-4 rounded-lg overflow-x-auto text-sm text-primary font-mono whitespace-pre-wrap border border-primary/20">
               {event.rawLogExample}
             </pre>
-            <div className="mt-3 text-sm text-muted-foreground">
-              Log file: <code className="bg-muted px-2 py-0.5 rounded">{event.logFile}</code>
+            <div className="mt-3 text-sm text-muted-foreground terminal-text">
+              Log file: <code className="bg-muted/30 px-2 py-0.5 rounded border border-primary/20">{event.logFile}</code>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-xl border border-border bg-card">
+            <div className="p-6 rounded-xl glass-card">
               <h3 className="font-semibold flex items-center gap-2 mb-4">
                 <Database className="h-5 w-5 text-primary" />
                 Parser Information
@@ -544,11 +549,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Parser Used:</span>
-                  <code className="bg-muted px-2 py-0.5 rounded">{event.parserUsed}</code>
+                  <code className="bg-muted/30 px-2 py-0.5 rounded border border-primary/20">{event.parserUsed}</code>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Event Type:</span>
-                  <code className="bg-muted px-2 py-0.5 rounded">{event.eventType}</code>
+                  <code className="bg-muted/30 px-2 py-0.5 rounded border border-primary/20">{event.eventType}</code>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Category:</span>
@@ -558,7 +563,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
             </div>
 
             {event.detectsAlert && (
-              <div className="p-6 rounded-xl border border-amber-500/30 bg-amber-500/5">
+              <div className="p-6 rounded-xl border border-amber-500/30 bg-amber-500/5 glass-card">
                 <h3 className="font-semibold flex items-center gap-2 mb-4 text-amber-400">
                   <Bell className="h-5 w-5" />
                   Alert Configuration
@@ -569,7 +574,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ eventId:
                     <span className="text-amber-400">{event.detectsAlert}</span>
                   </div>
                   {event.alertRule && (
-                    <div className="mt-3 p-3 bg-amber-500/10 rounded-lg text-amber-300 text-xs">
+                    <div className="mt-3 p-3 bg-amber-500/10 rounded-lg text-amber-300 text-xs border border-amber-500/30">
                       {event.alertRule}
                     </div>
                   )}
