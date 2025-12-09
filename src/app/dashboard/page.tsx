@@ -3,32 +3,37 @@
 import { Header } from "@/components/header";
 import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
-import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw, Plus } from "lucide-react";
+import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw, Plus, Radio, Cpu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, SecurityEvent, Alert, Stats } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [mode, setMode] = useState<'real' | 'mock'>('real');
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const [eventsData, alertsData, statsData] = await Promise.all([
+      const [eventsData, alertsData, statsData, configData] = await Promise.all([
         api.getEvents({ limit: 10 }),
         api.getAlerts({ limit: 5 }),
-        api.getStats()
+        api.getStats(),
+        api.getConfig().catch(() => ({ mode: 'real' as const, use_mock_data: false, version: '1.0.0' }))
       ]);
       
       setEvents(eventsData.events);
       setAlerts(alertsData.alerts);
       setStats(statsData);
+      setMode(configData.mode);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -53,13 +58,35 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL').length;
+  const criticalAlerts = alerts.filter(a => a.severity === 'critical' || a.severity === 'CRITICAL').length;
   const totalEvents = stats?.total_events || 0;
   const totalAlerts = stats?.total_alerts || 0;
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      
+      {/* Mode Banner */}
+      <div className={`border-b ${mode === 'mock' ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+        <div className="container px-4 py-2 flex items-center justify-center gap-2">
+          {mode === 'mock' ? (
+            <>
+              <Cpu className="h-4 w-4 text-yellow-500" />
+              <span className="text-sm font-medium text-yellow-600">
+                SIMULATION MODE — Data is simulated, not from real OS logs
+              </span>
+            </>
+          ) : (
+            <>
+              <Radio className="h-4 w-4 text-green-500 animate-pulse" />
+              <span className="text-sm font-medium text-green-600">
+                REAL MODE — Monitoring actual OS security events
+              </span>
+            </>
+          )}
+        </div>
+      </div>
       
       <main className="container px-4 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -73,10 +100,12 @@ export default function DashboardPage() {
             <span className="text-sm text-muted-foreground">
               Last update: {lastUpdate.toLocaleTimeString()}
             </span>
-            <Button onClick={simulateEvent} size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Simulate Event
-            </Button>
+            {isAdmin && (
+              <Button onClick={simulateEvent} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Simulate Event
+              </Button>
+            )}
             <Button onClick={fetchData} disabled={isLoading} size="sm" variant="outline">
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
@@ -141,8 +170,8 @@ export default function DashboardPage() {
                   className="p-4 rounded-lg border border-border bg-card flex items-start gap-4"
                 >
                   <div className={`mt-1 ${
-                    alert.severity === 'CRITICAL' ? 'text-red-500' :
-                    alert.severity === 'WARNING' ? 'text-yellow-500' :
+                    alert.severity === 'critical' || alert.severity === 'CRITICAL' ? 'text-red-500' :
+                    alert.severity === 'warning' || alert.severity === 'WARNING' ? 'text-yellow-500' :
                     'text-blue-500'
                   }`}>
                     <AlertTriangle className="h-5 w-5" />
@@ -150,11 +179,11 @@ export default function DashboardPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        alert.severity === 'CRITICAL' ? 'bg-red-500/10 text-red-500' :
-                        alert.severity === 'WARNING' ? 'bg-yellow-500/10 text-yellow-500' :
+                        alert.severity === 'critical' || alert.severity === 'CRITICAL' ? 'bg-red-500/10 text-red-500' :
+                        alert.severity === 'warning' || alert.severity === 'WARNING' ? 'bg-yellow-500/10 text-yellow-500' :
                         'bg-blue-500/10 text-blue-500'
                       }`}>
-                        {alert.severity}
+                        {alert.severity.toUpperCase()}
                       </span>
                       <span className="text-sm text-muted-foreground">
                         {new Date(alert.timestamp).toLocaleString()}
