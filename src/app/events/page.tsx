@@ -130,10 +130,19 @@ export default function EventsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="FAILED_LOGIN">Failed Login</SelectItem>
-                <SelectItem value="SUCCESS_LOGIN">Success Login</SelectItem>
-                <SelectItem value="SUDO_COMMAND">Sudo Command</SelectItem>
-                <SelectItem value="PRIV_ESCALATION">Privilege Escalation</SelectItem>
+                <SelectItem value="AUTH_SUCCESS">Auth Success</SelectItem>
+                <SelectItem value="AUTH_FAILURE">Auth Failure</SelectItem>
+                <SelectItem value="SUDO_SUCCESS">Sudo Success</SelectItem>
+                <SelectItem value="SUDO_FAILURE">Sudo Failure</SelectItem>
+                <SelectItem value="FIREWALL_BLOCK">Firewall Block</SelectItem>
+                <SelectItem value="FIREWALL_ALLOW">Firewall Allow</SelectItem>
+                <SelectItem value="SERVICE_START">Service Start</SelectItem>
+                <SelectItem value="SERVICE_STOP">Service Stop</SelectItem>
+                <SelectItem value="SERVICE_FAILURE">Service Failure</SelectItem>
+                <SelectItem value="KERNEL_WARNING">Kernel Warning</SelectItem>
+                <SelectItem value="KERNEL_ERROR">Kernel Error</SelectItem>
+                <SelectItem value="SESSION_START">Session Start</SelectItem>
+                <SelectItem value="SESSION_END">Session End</SelectItem>
               </SelectContent>
             </Select>
 

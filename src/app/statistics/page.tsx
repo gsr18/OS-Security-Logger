@@ -2,7 +2,7 @@
 
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Activity, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, Users, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api, Stats } from "@/lib/api";
 
@@ -52,7 +52,9 @@ export default function StatisticsPage() {
   const eventsByType = stats?.events_by_type || {};
   const eventsByOs = stats?.events_by_os || {};
   const topIps = stats?.top_source_ips || [];
+  const topUsers = stats?.top_users || [];
   const alertsBySeverity = stats?.alerts_by_severity || {};
+  const uniqueIps = stats?.unique_ips || topIps.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,7 +104,7 @@ export default function StatisticsPage() {
               <p className="text-sm text-muted-foreground">Unique IPs</p>
               <Activity className="h-5 w-5 text-blue-500" />
             </div>
-            <p className="text-3xl font-bold">{topIps.length}</p>
+            <p className="text-3xl font-bold">{uniqueIps}</p>
             <p className="text-xs text-muted-foreground mt-1">Source addresses</p>
           </div>
 
@@ -112,14 +114,14 @@ export default function StatisticsPage() {
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
             <p className="text-3xl font-bold text-red-500">
-              {alertsBySeverity.CRITICAL || 0}
+              {alertsBySeverity.critical || alertsBySeverity.CRITICAL || 0}
             </p>
             <p className="text-xs text-muted-foreground mt-1">High priority</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Top Offending IPs */}
+          {/* Top Source IPs */}
           <div className="p-6 rounded-lg border border-border bg-card">
             <h2 className="text-xl font-semibold mb-4">Top Source IPs</h2>
             {topIps.length === 0 ? (
@@ -144,32 +146,60 @@ export default function StatisticsPage() {
             )}
           </div>
 
-          {/* Events by Type */}
+          {/* Top Users */}
           <div className="p-6 rounded-lg border border-border bg-card">
-            <h2 className="text-xl font-semibold mb-4">Events by Type</h2>
-            {Object.keys(eventsByType).length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No event data available</p>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Top Users
+            </h2>
+            {topUsers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No user data available</p>
             ) : (
-              <div className="space-y-4">
-                {Object.entries(eventsByType).map(([type, count]) => (
-                  <div key={type}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{type.replace(/_/g, ' ')}</span>
-                      <span className="text-sm font-semibold">{count}</span>
+              <div className="space-y-3">
+                {topUsers.slice(0, 10).map((item, index) => (
+                  <div key={item.user} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-muted-foreground w-6">
+                        #{index + 1}
+                      </span>
+                      <span className="font-mono text-sm">{item.user}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className="bg-primary rounded-full h-2 transition-all"
-                        style={{ 
-                          width: `${(count / Math.max(...Object.values(eventsByType))) * 100}%` 
-                        }}
-                      />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{item.count}</span>
+                      <span className="text-xs text-muted-foreground">events</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+        </div>
+
+        {/* Events by Type */}
+        <div className="p-6 rounded-lg border border-border bg-card mb-8">
+          <h2 className="text-xl font-semibold mb-4">Events by Type</h2>
+          {Object.keys(eventsByType).length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No event data available</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(eventsByType).map(([type, count]) => (
+                <div key={type}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{type.replace(/_/g, ' ')}</span>
+                    <span className="text-sm font-semibold">{count}</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div 
+                      className="bg-primary rounded-full h-2 transition-all"
+                      style={{ 
+                        width: `${(count / Math.max(...Object.values(eventsByType))) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Platform Breakdown */}
@@ -184,7 +214,7 @@ export default function StatisticsPage() {
                   <p className="text-2xl font-bold mb-1">{count}</p>
                   <p className="text-sm text-muted-foreground">{os} Events</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {((count / stats!.total_events) * 100).toFixed(1)}% of total
+                    {stats?.total_events ? ((count / stats.total_events) * 100).toFixed(1) : 0}% of total
                   </p>
                 </div>
               ))}
@@ -198,29 +228,37 @@ export default function StatisticsPage() {
           {Object.keys(alertsBySeverity).length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No alerts generated yet</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center p-4 rounded-lg bg-red-500/10 border border-red-500/20">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-500" />
                 <p className="text-2xl font-bold text-red-500 mb-1">
-                  {alertsBySeverity.CRITICAL || 0}
+                  {alertsBySeverity.critical || alertsBySeverity.CRITICAL || 0}
                 </p>
                 <p className="text-sm text-muted-foreground">Critical</p>
+              </div>
+
+              <div className="text-center p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+                <p className="text-2xl font-bold text-orange-500 mb-1">
+                  {alertsBySeverity.high || alertsBySeverity.HIGH || 0}
+                </p>
+                <p className="text-sm text-muted-foreground">High</p>
               </div>
 
               <div className="text-center p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
                 <p className="text-2xl font-bold text-yellow-500 mb-1">
-                  {alertsBySeverity.WARNING || 0}
+                  {alertsBySeverity.medium || alertsBySeverity.warning || alertsBySeverity.WARNING || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Warning</p>
+                <p className="text-sm text-muted-foreground">Medium</p>
               </div>
 
               <div className="text-center p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-blue-500" />
                 <p className="text-2xl font-bold text-blue-500 mb-1">
-                  {alertsBySeverity.INFO || 0}
+                  {alertsBySeverity.low || alertsBySeverity.info || alertsBySeverity.INFO || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Info</p>
+                <p className="text-sm text-muted-foreground">Low</p>
               </div>
             </div>
           )}
