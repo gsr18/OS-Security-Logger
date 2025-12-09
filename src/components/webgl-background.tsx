@@ -250,7 +250,7 @@ export function WebGLBackground() {
         style={{
           background: isDark 
             ? "linear-gradient(to bottom, #0a0f0a, #0d1a12, #0a0f0a)" 
-            : "linear-gradient(to bottom, #f0f7f4, #e8f5ee, #f0f7f4)"
+            : "linear-gradient(to bottom, #e8f5ee, #d4ebe0, #e8f5ee)"
         }}
       />
       <Canvas
@@ -258,14 +258,21 @@ export function WebGLBackground() {
         style={{ background: "transparent" }}
         gl={{ alpha: true, antialias: true }}
       >
-        <fog attach="fog" args={[isDark ? "#0a0f0a" : "#f0f7f4", 5, 25]} />
-        <ambientLight intensity={isDark ? 0.1 : 0.3} />
+        <fog attach="fog" args={[isDark ? "#0a0f0a" : "#e8f5ee", 5, 25]} />
+        <ambientLight intensity={isDark ? 0.1 : 0.4} />
         <Particles count={400} isDark={isDark} />
         <NetworkLines count={60} isDark={isDark} />
         <GridFloor isDark={isDark} />
         <DataStream isDark={isDark} />
       </Canvas>
-      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/50 to-transparent pointer-events-none" />
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isDark 
+            ? "linear-gradient(to top, rgba(3, 8, 6, 0.9), rgba(3, 8, 6, 0.5), transparent)"
+            : "linear-gradient(to top, rgba(240, 247, 244, 0.95), rgba(240, 247, 244, 0.7), rgba(240, 247, 244, 0.3))"
+        }}
+      />
     </div>
   );
 }
