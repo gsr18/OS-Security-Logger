@@ -83,9 +83,14 @@ export const Header = () => {
               <LogOut className="h-4 w-4" />
             </Button>
           ) : !isLoading && (
-            <Button asChild variant="default" size="sm">
-              <Link href="/login">Sign in</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/login">Sign in</Link>
+              </Button>
+              <Button asChild variant="default" size="sm">
+                <Link href="/signup">Sign up</Link>
+              </Button>
+            </div>
           )}
           
           {isAuthenticated && (
