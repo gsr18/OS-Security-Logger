@@ -1,10 +1,10 @@
-import { LucideIcon } from "lucide-react";
+import { type ElementType } from "react";
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: ElementType;
   description?: string;
   trend?: {
     value: number;
