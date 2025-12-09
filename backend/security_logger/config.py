@@ -6,6 +6,9 @@ from typing import Any, Dict
 from pathlib import Path
 
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./security_events.db")
+
+
 class Config:
     """Application configuration."""
     
@@ -27,9 +30,9 @@ class Config:
 def load_config(config_path: str = "config.yaml") -> Config:
     """Load configuration from YAML file."""
     
-    # Default configuration
     default_config = {
         "database": {
+            "url": DATABASE_URL,
             "path": "./security_events.db"
         },
         "logging": {
@@ -63,12 +66,10 @@ def load_config(config_path: str = "config.yaml") -> Config:
         }
     }
     
-    # Load from file if exists
     if os.path.exists(config_path):
         try:
             with open(config_path, 'r') as f:
                 file_config = yaml.safe_load(f) or {}
-                # Merge with defaults
                 default_config.update(file_config)
         except Exception as e:
             print(f"Warning: Could not load config file: {e}")
