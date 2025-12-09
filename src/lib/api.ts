@@ -76,6 +76,12 @@ interface HealthResponse {
   timestamp: string;
 }
 
+interface ConfigResponse {
+  mode: 'mock' | 'real';
+  use_mock_data: boolean;
+  version: string;
+}
+
 export class SecurityLoggerAPI {
   async health(): Promise<HealthResponse> {
     const response = await fetch('/api/health');
@@ -185,8 +191,16 @@ export class SecurityLoggerAPI {
     return response.json();
   }
 
+  async getConfig(): Promise<ConfigResponse> {
+    const response = await fetch('/api/config');
+    if (!response.ok) {
+      throw new Error('Failed to fetch config');
+    }
+    return response.json();
+  }
+
   async generateEvent(): Promise<SecurityEvent> {
-    const response = await fetch('/api/events', {
+    const response = await fetch('/api/events/simulate', {
       method: 'POST',
     });
     
