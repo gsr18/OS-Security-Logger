@@ -172,11 +172,9 @@ export async function POST(request: Request) {
         alert_type: detectsAlert.toUpperCase().replace(/ /g, "_"),
         severity: alertSeverity,
         description: `${detectsAlert} detected from ${ip || user || host}`,
-        source_ip: ip,
-        username: user,
-        triggered_at: timestamp,
-        acknowledged: false,
-        related_events: [eventData.id]
+        timestamp: timestamp,
+        status: "new",
+        related_event_ids: JSON.stringify([eventData.id])
       };
 
       const { data: createdAlert, error: alertError } = await supabase
