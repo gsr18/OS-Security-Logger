@@ -54,7 +54,7 @@ export default function Home() {
                 Launch Dashboard
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="text-base border-primary/50 hover:bg-primary/10">
+            <Button asChild size="lg" className="text-base bg-primary hover:bg-primary/90 text-primary-foreground glow-green">
               <Link href="/events">
                 <Eye className="mr-2 h-5 w-5" />
                 Browse Events
