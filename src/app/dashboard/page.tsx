@@ -3,52 +3,38 @@
 import { Header } from "@/components/header";
 import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
-import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw, Plus, Radio, Cpu } from "lucide-react";
+import { Shield, Activity, AlertTriangle, TrendingUp, RefreshCw, Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, SecurityEvent, Alert, Stats } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [mode, setMode] = useState<'real' | 'mock'>('real');
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const [eventsData, alertsData, statsData, configData] = await Promise.all([
+      const [eventsData, alertsData, statsData] = await Promise.all([
         api.getEvents({ limit: 10 }),
         api.getAlerts({ limit: 5 }),
         api.getStats(),
-        api.getConfig().catch(() => ({ mode: 'real' as const, use_mock_data: false, version: '1.0.0' }))
       ]);
       
       setEvents(eventsData.events);
       setAlerts(alertsData.alerts);
       setStats(statsData);
-      setMode(configData.mode);
       setLastUpdate(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
       console.error('Error fetching dashboard data:', err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const simulateEvent = async () => {
-    try {
-      await api.generateEvent();
-      await fetchData();
-    } catch (err) {
-      console.error('Error generating event:', err);
     }
   };
 
@@ -61,30 +47,18 @@ export default function DashboardPage() {
   const criticalAlerts = alerts.filter(a => a.severity === 'critical' || a.severity === 'CRITICAL').length;
   const totalEvents = stats?.total_events || 0;
   const totalAlerts = stats?.total_alerts || 0;
-  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Mode Banner */}
-      <div className={`border-b ${mode === 'mock' ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+      {/* Live Mode Banner */}
+      <div className="border-b bg-green-500/10 border-green-500/30">
         <div className="container px-4 py-2 flex items-center justify-center gap-2">
-          {mode === 'mock' ? (
-            <>
-              <Cpu className="h-4 w-4 text-yellow-500" />
-              <span className="text-sm font-medium text-yellow-600">
-                SIMULATION MODE — Data is simulated, not from real OS logs
-              </span>
-            </>
-          ) : (
-            <>
-              <Radio className="h-4 w-4 text-green-500 animate-pulse" />
-              <span className="text-sm font-medium text-green-600">
-                REAL MODE — Monitoring actual OS security events
-              </span>
-            </>
-          )}
+          <Radio className="h-4 w-4 text-green-500 animate-pulse" />
+          <span className="text-sm font-medium text-green-600">
+            LIVE — Real security events from production systems
+          </span>
         </div>
       </div>
       
@@ -100,12 +74,6 @@ export default function DashboardPage() {
             <span className="text-sm text-muted-foreground">
               Last update: {lastUpdate.toLocaleTimeString()}
             </span>
-            {isAdmin && (
-              <Button onClick={simulateEvent} size="sm" variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Simulate Event
-              </Button>
-            )}
             <Button onClick={fetchData} disabled={isLoading} size="sm" variant="outline">
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
