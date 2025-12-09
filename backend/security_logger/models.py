@@ -1,8 +1,31 @@
-"""SQLAlchemy ORM models for SecurityEvent and Alert."""
+"""SQLAlchemy ORM models for SecurityEvent, Alert, and User."""
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, Index
 from sqlalchemy.sql import func
 from .database import Base
+
+
+class UserModel(Base):
+    """ORM model for users."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=True)
+    role = Column(String(32), nullable=False, default="viewer", index=True)
+
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization (excludes password_hash)."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'email': self.email,
+            'fullName': self.full_name,
+            'role': self.role,
+        }
 
 
 class SecurityEventModel(Base):
