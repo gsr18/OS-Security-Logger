@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/header";
 import Script from "next/script";
+import { AuthProvider } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +35,9 @@ export default function RootLayout({
           strategy="afterInteractive"
           data-orchids-project-id="9b67223e-a4d7-4c46-85d1-001eecefff8b"
         />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
