@@ -1,9 +1,6 @@
 /**
- * API client for security logger backend (Flask or Next.js fallback)
+ * API client for security logger (uses Supabase via Next.js API routes)
  */
-
-const FLASK_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
 export interface SecurityEvent {
   id: number;
@@ -79,65 +76,13 @@ interface HealthResponse {
   timestamp: string;
 }
 
-let backendAvailable: boolean | null = null;
-let lastHealthCheck = 0;
-const HEALTH_CHECK_INTERVAL = 30000;
-
 export class SecurityLoggerAPI {
-  private flaskUrl: string;
-  private useMock: boolean;
-
-  constructor(flaskUrl: string = FLASK_BACKEND_URL, useMock: boolean = USE_MOCK_DATA) {
-    this.flaskUrl = flaskUrl;
-    this.useMock = useMock;
-  }
-
-  private async checkBackendHealth(): Promise<boolean> {
-    const now = Date.now();
-    if (backendAvailable !== null && now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
-      return backendAvailable;
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
-      const response = await fetch(`${this.flaskUrl}/api/health`, {
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      backendAvailable = response.ok;
-      lastHealthCheck = now;
-      return backendAvailable;
-    } catch {
-      backendAvailable = false;
-      lastHealthCheck = now;
-      return false;
-    }
-  }
-
-  private getApiBase(): string {
-    if (this.useMock || backendAvailable === false) {
-      return '';
-    }
-    return this.flaskUrl;
-  }
-
   async health(): Promise<HealthResponse> {
-    const useFlask = await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
-    const response = await fetch(`${baseUrl}/api/health`);
+    const response = await fetch('/api/health');
     if (!response.ok) {
       throw new Error('API health check failed');
     }
-    const data = await response.json();
-    return {
-      ...data,
-      backend: useFlask ? 'flask' : 'nextjs',
-      mode: useFlask ? (data.mode || 'real') : 'mock',
-    };
+    return response.json();
   }
 
   async getEvents(params?: {
@@ -155,9 +100,6 @@ export class SecurityLoggerAPI {
     from?: string;
     to?: string;
   }): Promise<EventsResponse> {
-    const useFlask = !this.useMock && await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
     const queryParams = new URLSearchParams();
     
     if (params?.page) queryParams.set('page', params.page.toString());
@@ -174,7 +116,7 @@ export class SecurityLoggerAPI {
     if (params?.from) queryParams.set('from', params.from);
     if (params?.to) queryParams.set('to', params.to);
 
-    const url = `${baseUrl}/api/events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const url = `/api/events${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -196,9 +138,6 @@ export class SecurityLoggerAPI {
     from?: string;
     to?: string;
   }): Promise<AlertsResponse> {
-    const useFlask = !this.useMock && await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
     const queryParams = new URLSearchParams();
     
     if (params?.page) queryParams.set('page', params.page.toString());
@@ -212,7 +151,7 @@ export class SecurityLoggerAPI {
     if (params?.from) queryParams.set('from', params.from);
     if (params?.to) queryParams.set('to', params.to);
 
-    const url = `${baseUrl}/api/alerts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const url = `/api/alerts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -223,10 +162,7 @@ export class SecurityLoggerAPI {
   }
 
   async updateAlertStatus(alertId: number, status: string): Promise<{ success: boolean }> {
-    const useFlask = !this.useMock && await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
-    const response = await fetch(`${baseUrl}/api/alerts/${alertId}`, {
+    const response = await fetch(`/api/alerts/${alertId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -240,10 +176,7 @@ export class SecurityLoggerAPI {
   }
 
   async getStats(): Promise<Stats> {
-    const useFlask = !this.useMock && await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
-    const response = await fetch(`${baseUrl}/api/stats`);
+    const response = await fetch('/api/stats');
     
     if (!response.ok) {
       throw new Error(`Failed to fetch stats: ${response.statusText}`);
@@ -253,10 +186,7 @@ export class SecurityLoggerAPI {
   }
 
   async generateEvent(): Promise<SecurityEvent> {
-    const useFlask = !this.useMock && await this.checkBackendHealth();
-    const baseUrl = useFlask ? this.flaskUrl : '';
-    
-    const response = await fetch(`${baseUrl}/api/events`, {
+    const response = await fetch('/api/events', {
       method: 'POST',
     });
     
@@ -266,15 +196,6 @@ export class SecurityLoggerAPI {
     
     const data = await response.json();
     return data.event;
-  }
-
-  isUsingFlaskBackend(): boolean {
-    return backendAvailable === true && !this.useMock;
-  }
-
-  resetHealthCheck(): void {
-    backendAvailable = null;
-    lastHealthCheck = 0;
   }
 }
 
