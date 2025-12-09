@@ -36,10 +36,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchEvents();
-    
-    // Auto-refresh every 10 seconds
     const interval = setInterval(fetchEvents, 10000);
-    
     return () => clearInterval(interval);
   }, []);
 
@@ -110,14 +107,12 @@ export default function EventsPage() {
           <div className="mb-6 p-4 rounded-lg border border-destructive bg-destructive/10 text-destructive">
             <p className="font-medium">Error loading events</p>
             <p className="text-sm">{error}</p>
-            <p className="text-sm mt-2">Make sure the Python backend is running on http://localhost:5000</p>
           </div>
         )}
 
         {/* Filters */}
         <div className="mb-6 p-4 rounded-lg border border-border bg-card">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -129,7 +124,6 @@ export default function EventsPage() {
               />
             </div>
 
-            {/* Event Type Filter */}
             <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Event Type" />
@@ -143,7 +137,6 @@ export default function EventsPage() {
               </SelectContent>
             </Select>
 
-            {/* OS Filter */}
             <Select value={osFilter} onValueChange={setOsFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Operating System" />
@@ -157,7 +150,6 @@ export default function EventsPage() {
             </Select>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-4">
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RefreshCw className="h-4 w-4 mr-2" />
