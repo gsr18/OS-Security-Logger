@@ -112,6 +112,15 @@ export default function LoginPage() {
               <p>Password: admin123</p>
             </div>
           </div>
+
+          <div className="mt-4">
+            <p className="text-sm text-slate-400 text-center">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-center text-sm text-slate-500 mt-6">
