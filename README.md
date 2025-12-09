@@ -65,6 +65,57 @@ A cross-platform security event logger that monitors OS-level security events in
 - `KERNEL_WARNING` / `KERNEL_ERROR` / `KERNEL_OOM`
 - `SESSION_START` / `SESSION_END`
 
+## Authentication
+
+The application uses JWT-based authentication with role-based access control.
+
+### Default Admin User
+
+On first run, a default admin user is created:
+
+- **Email:** `admin@example.com`
+- **Password:** `admin123`
+- **Role:** `admin`
+
+### User Roles
+
+| Role | Access |
+|------|--------|
+| `admin` | Full read/write access to all features |
+| `viewer` | Read-only access to events, alerts, and statistics |
+
+### Login
+
+1. Navigate to `/login`
+2. Enter your email and password
+3. On successful login, you'll be redirected to `/dashboard`
+
+### Protected Routes
+
+The following routes require authentication:
+- `/dashboard` - Main dashboard
+- `/events` - Security events list
+- `/alerts` - Alerts management
+- `/statistics` - Analytics and charts
+
+Unauthenticated users are automatically redirected to `/login`.
+
+### Auth API Endpoints
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/api/auth/login` | POST | No | Login with email/password, returns JWT |
+| `/api/auth/me` | GET | Yes | Get current user info |
+| `/api/auth/register` | POST | Admin only | Create new user |
+
+### Token Storage
+
+JWT tokens are stored in the browser's `localStorage`:
+- `accessToken` - The JWT token
+- `user` - User profile data
+
+To logout, the application clears these values and redirects to `/login`.
+
 ## Quick Start
 
 ### 1. Start the Python Backend
@@ -99,6 +150,12 @@ npm run dev
 
 The frontend runs at `http://localhost:3000`
 
+### 3. Login
+
+Navigate to `http://localhost:3000/login` and use the default admin credentials:
+- Email: `admin@example.com`
+- Password: `admin123`
+
 ## Configuration
 
 ### Backend (`backend/config.yaml`)
@@ -129,6 +186,21 @@ api:
   port: 5000
 ```
 
+### Environment Variables
+
+```bash
+# JWT Configuration
+JWT_SECRET_KEY=your-secret-key
+JWT_EXPIRY_HOURS=24
+
+# Admin User (created on first run)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+
+# Database
+DATABASE_URL=sqlite:///./security_events.db
+```
+
 ### Frontend (`.env.local`)
 
 ```bash
@@ -138,14 +210,17 @@ NEXT_PUBLIC_USE_MOCK_DATA=false
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Health check with backend status |
-| `/api/events` | GET | List events with filtering and pagination |
-| `/api/events` | POST | Generate a mock event (testing) |
-| `/api/alerts` | GET | List alerts with filtering |
-| `/api/alerts/:id` | PATCH | Update alert status |
-| `/api/stats` | GET | Get statistics and aggregations |
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/health` | GET | No | Health check with backend status |
+| `/api/auth/login` | POST | No | Login and get JWT token |
+| `/api/auth/me` | GET | Yes | Get current user |
+| `/api/auth/register` | POST | Admin | Create new user |
+| `/api/events` | GET | Yes | List events with filtering |
+| `/api/events` | POST | Admin | Create event (testing) |
+| `/api/alerts` | GET | Yes | List alerts with filtering |
+| `/api/alerts/:id` | PATCH | Admin | Update alert status |
+| `/api/stats` | GET | Yes | Get statistics |
 
 ### Query Parameters
 
@@ -208,7 +283,7 @@ The application uses SQLite as the storage backend with SQLAlchemy ORM for data 
 ### Database File
 
 - **Location**: `security_events.db` (relative to backend root)
-- **Tables**: `security_events` and `alerts`
+- **Tables**: `security_events`, `alerts`, and `users`
 - **Auto-created**: Tables are automatically created on first run via `Base.metadata.create_all()`
 
 ### Resetting the Database
@@ -253,6 +328,16 @@ python run.py --mock
 | related_event_ids | TEXT | Comma-separated related event IDs |
 | status | VARCHAR(32) | active/acknowledged/resolved/dismissed |
 
+**users table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| created_at | DATETIME | When the user was created |
+| email | VARCHAR(255) | User email (unique) |
+| password_hash | VARCHAR(255) | Bcrypt hashed password |
+| full_name | VARCHAR(255) | User display name |
+| role | VARCHAR(32) | admin or viewer |
+
 ### Configuration
 
 Set `DATABASE_URL` environment variable to customize the database location:
@@ -267,6 +352,8 @@ export DATABASE_URL="sqlite:///./custom_path.db"
 - Python 3.8+
 - Flask 3.0 with CORS
 - SQLite with SQLAlchemy ORM
+- JWT authentication (PyJWT)
+- bcrypt password hashing
 - YAML configuration
 
 **Frontend:**
@@ -285,6 +372,7 @@ export DATABASE_URL="sqlite:///./custom_path.db"
 │   ├── requirements.txt
 │   └── security_logger/
 │       ├── api.py             # Flask REST API
+│       ├── auth.py            # Authentication utilities
 │       ├── main.py            # Application orchestrator
 │       ├── events.py          # Data classes
 │       ├── log_reader.py      # Real-time log tailing
@@ -295,13 +383,15 @@ export DATABASE_URL="sqlite:///./custom_path.db"
 │
 ├── src/
 │   ├── app/                   # Next.js pages
+│   │   ├── login/             # Login page
 │   │   ├── dashboard/
 │   │   ├── events/
 │   │   ├── alerts/
 │   │   └── statistics/
 │   ├── components/            # React components
 │   └── lib/
-│       └── api.ts             # API client
+│       ├── api.ts             # API client
+│       └── auth.tsx           # Auth context and hooks
 │
 └── README.md
 ```
@@ -309,4 +399,3 @@ export DATABASE_URL="sqlite:///./custom_path.db"
 ## License
 
 MIT
-
