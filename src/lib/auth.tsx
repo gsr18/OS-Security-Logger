@@ -23,7 +23,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const PROTECTED_ROUTES = ["/dashboard", "/events", "/alerts", "/statistics"];
+const PROTECTED_ROUTES = ["/dashboard", "/events", "/alerts", "/statistics", "/simulate", "/my"];
+const ADMIN_ROUTES = ["/dashboard", "/events", "/alerts", "/statistics", "/simulate"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -44,10 +45,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !accessToken && PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
+    if (isLoading) return;
+
+    const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route));
+
+    if (!accessToken && isProtected) {
       router.push("/login");
+      return;
     }
-  }, [isLoading, accessToken, pathname, router]);
+
+    if (accessToken && user && user.role !== "admin" && isAdminRoute) {
+      router.replace("/my");
+    }
+  }, [isLoading, accessToken, pathname, router, user]);
 
   const login = async (email: string, password: string) => {
     const response = await fetch("/api/auth/login", {

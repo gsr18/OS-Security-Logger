@@ -9,7 +9,17 @@ import { useAuth } from "@/lib/auth";
 export const Header = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const { user, isAuthenticated, logout, isLoading, isAdmin } = useAuth();
+  const adminLinks = [
+    { href: "/dashboard", label: "dashboard" },
+    { href: "/events", label: "events" },
+    { href: "/alerts", label: "alerts" },
+    { href: "/statistics", label: "analytics" },
+    { href: "/simulate", label: "simulate" },
+  ];
+  const viewerLinks = [
+    { href: "/my", label: "my view" },
+  ];
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -50,13 +60,7 @@ export const Header = () => {
           
           {isAuthenticated && (
             <nav className="hidden md:flex items-center gap-1">
-              {[
-                { href: "/dashboard", label: "dashboard" },
-                { href: "/events", label: "events" },
-                { href: "/alerts", label: "alerts" },
-                { href: "/statistics", label: "analytics" },
-                { href: "/simulate", label: "simulate" },
-              ].map((item) => (
+              {(isAdmin ? adminLinks : viewerLinks).map((item) => (
                 <Link 
                   key={item.href}
                   href={item.href} 
@@ -137,13 +141,7 @@ export const Header = () => {
                 </span>
               </div>
             </div>
-            {[
-              { href: "/dashboard", label: "dashboard" },
-              { href: "/events", label: "events" },
-              { href: "/alerts", label: "alerts" },
-              { href: "/statistics", label: "analytics" },
-              { href: "/simulate", label: "simulate" },
-            ].map((item) => (
+            {(isAdmin ? adminLinks : viewerLinks).map((item) => (
               <Link 
                 key={item.href}
                 href={item.href} 
