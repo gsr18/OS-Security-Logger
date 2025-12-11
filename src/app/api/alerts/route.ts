@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     .order('timestamp', { ascending: false });
 
   if (type) query = query.eq('alert_type', type);
-  if (severity) query = query.eq('severity', severity);
+  if (severity) query = query.ilike('severity', severity);
   if (status) query = query.eq('status', status);
 
   const offset = (page - 1) * pageSize;
@@ -30,16 +30,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const alerts = (data || []).map((a: DbAlert) => ({
-    id: a.id,
-    created_at: a.created_at,
-    timestamp: a.timestamp,
-    alert_type: a.alert_type,
-    severity: a.severity,
-    description: a.description,
-    related_event_ids: a.related_event_ids,
-    status: a.status,
-  }));
+  const alerts = (data || []).map((a: DbAlert) => {
+    const normalizedSeverity = (a.severity || '').toUpperCase();
+    let severityLevel = normalizedSeverity;
+    if (normalizedSeverity === 'HIGH') severityLevel = 'WARNING';
+    if (normalizedSeverity === 'MEDIUM' || normalizedSeverity === 'LOW') severityLevel = 'INFO';
+
+    return {
+      id: a.id,
+      created_at: a.created_at,
+      timestamp: a.timestamp,
+      alert_type: a.alert_type,
+      severity: severityLevel,
+      description: a.description,
+      related_event_ids: a.related_event_ids,
+      status: a.status,
+    };
+  });
 
   const total = count || 0;
   const totalPages = Math.ceil(total / pageSize);
