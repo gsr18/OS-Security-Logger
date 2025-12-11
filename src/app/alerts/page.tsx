@@ -8,6 +8,25 @@ import { AlertTriangle, Search, RefreshCw, CheckCircle, Shield, Clock } from "lu
 import { useState, useEffect } from "react";
 import { api, Alert } from "@/lib/api";
 import { WebGLBackground } from "@/components/webgl-background";
+import { supabase, DbAlert } from "@/lib/supabase";
+
+const normalizeSeverity = (severity: string) => {
+  const normalized = (severity || "").toUpperCase();
+  if (normalized === "HIGH") return "WARNING";
+  if (normalized === "MEDIUM" || normalized === "LOW") return "INFO";
+  return normalized || "INFO";
+};
+
+const mapDbAlert = (alert: Partial<DbAlert>): Alert => ({
+  id: alert.id ?? 0,
+  created_at: alert.created_at ?? "",
+  timestamp: alert.timestamp ?? "",
+  alert_type: alert.alert_type ?? "",
+  severity: normalizeSeverity(alert.severity ?? ""),
+  description: alert.description ?? "",
+  related_event_ids: alert.related_event_ids ?? null,
+  status: alert.status,
+});
 
 export default function AlertsPage() {
   const [allAlerts, setAllAlerts] = useState<Alert[]>([]);
@@ -35,6 +54,29 @@ export default function AlertsPage() {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 10000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("alerts-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, (payload) => {
+        if (payload.eventType === "DELETE" && payload.old?.id) {
+          setAllAlerts((prev) => prev.filter((a) => a.id !== payload.old.id));
+          return;
+        }
+
+        if (!payload.new) return;
+        const incoming = mapDbAlert(payload.new as DbAlert);
+        setAllAlerts((prev) => {
+          const next = [incoming, ...prev.filter((a) => a.id !== incoming.id)];
+          return next.slice(0, 500);
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filteredAlerts = allAlerts.filter(alert => {
